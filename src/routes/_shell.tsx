@@ -12,7 +12,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AppSidebar, AppHeader, BottomNavigation } from "@/components/shared";
+import { AppSidebar, AppHeader, BottomNavigation, AiTutorFloatingBot } from "@/components/shared";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_shell")({
@@ -167,6 +167,9 @@ function Shell() {
             <Outlet />
           </main>
         </div>
+
+        {/* Global Floating AI Tutor Bot (n8n LangChain Agent) */}
+        <AiTutorFloatingBot />
 
         {/* Mobile Fixed Bottom Navigation Bar */}
         <BottomNavigation onOpenMore={() => setMobileDrawerOpen(true)} />
