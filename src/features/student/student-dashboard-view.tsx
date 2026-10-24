@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Gamepad2,
   FlaskConical,
@@ -10,7 +10,6 @@ import {
   Flame,
   CheckCircle2,
   Trophy,
-  Award,
   ArrowRight,
   ChevronRight,
   Play,
@@ -18,6 +17,12 @@ import {
   Target,
   Check,
   Compass,
+  Bot,
+  Sparkles,
+  Mic,
+  Volume2,
+  Send,
+  Zap,
 } from "lucide-react";
 import {
   AreaChart,
@@ -31,7 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDemo } from "@/lib/demo-store";
-import { demoStudent, lessons, achievements, getSubjectTheme, type Subject } from "@/data/demo";
+import { demoStudent, lessons, getSubjectTheme, type Subject } from "@/data/demo";
 import { cn } from "@/lib/utils";
 
 // Weekly activity data (Mon - Fri) representing study minutes
@@ -45,8 +50,10 @@ const weeklyActivityData = [
 
 export function StudentDashboardView() {
   const d = useDemo();
+  const navigate = useNavigate();
   const studentClass = d.studentClass ?? 7;
   const studentName = d.studentName || demoStudent.name;
+  const [quickDoubt, setQuickDoubt] = useState("");
 
   // Filter lessons strictly to the student's class
   const classLessons = useMemo(() => {
@@ -79,26 +86,11 @@ export function StudentDashboardView() {
     }).filter((s) => s.hasLessons);
   }, [classLessons, d.completed]);
 
-  // Section F: Assignments and recent activity
-  const classAssignments = useMemo(() => {
-    return classLessons.slice(0, 3).map((l, idx) => {
-      const isDone = d.completed.includes(l.id);
-      return {
-        id: `asg-${l.id}`,
-        title: l.title,
-        subject: l.subject,
-        chapter: l.chapter,
-        due: idx === 0 ? "Today, 5:00 PM" : idx === 1 ? "Tomorrow" : "Friday",
-        isCompleted: isDone,
-        lessonId: l.id,
-      };
-    });
-  }, [classLessons, d.completed]);
-
-  // Unlocked achievements for right panel
-  const unlockedAchievements = useMemo(() => {
-    return achievements.filter((a) => d.unlocked.includes(a.id as any)).slice(0, 3);
-  }, [d.unlocked]);
+  const handleQuickDoubtSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickDoubt.trim()) return;
+    void navigate({ to: "/tutor", search: { q: quickDoubt.trim() } });
+  };
 
   return (
     <div className="w-full space-y-6">
@@ -378,62 +370,178 @@ export function StudentDashboardView() {
           </div>
 
           {/* ===================================================================== */}
-          {/* SECTION F — ASSIGNMENTS & RECENT ACTIVITY                              */}
+          {/* SECTION F — ASK AI CHATBOT, TALK WITH VIDYAVOICE & GO TO SIMULATIONS   */}
           {/* ===================================================================== */}
           <div className="space-y-3.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg sm:text-xl font-black text-foreground tracking-tight">
-                Assignments & Activity
-              </h2>
-              <Link
-                to="/classrooms"
-                className="text-xs font-bold text-[#6541F5] hover:underline flex items-center gap-1"
-              >
-                Go to Classrooms <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
+              <div>
+                <h2 className="text-lg sm:text-xl font-black text-foreground tracking-tight">
+                  Learning Assistants & STEM Simulations
+                </h2>
+                <p className="text-xs text-muted-foreground font-medium">
+                  Ask doubts to AI, speak with VidyaVoice, or launch hands-on labs
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-2.5">
-              {classAssignments.map((asg) => (
-                <div
-                  key={asg.id}
-                  className="rounded-2xl border border-border bg-card p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-2xs"
-                >
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[#6541F5]">{asg.subject}</span>
-                      <span className="text-xs text-muted-foreground">·</span>
-                      <span className="text-xs text-muted-foreground font-medium">Due: {asg.due}</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: Ask AI Chatbot */}
+              <div className="rounded-2xl border border-[#EAE7FF] bg-[#F7F5FE] dark:bg-card dark:border-border p-4.5 flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all group">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#6541F5]/15 text-[#6541F5] flex items-center justify-center">
+                      <Bot className="w-5 h-5" />
                     </div>
-                    <h4 className="font-bold text-sm text-foreground truncate">{asg.title}</h4>
+                    <Badge variant="outline" className="border-[#6541F5]/30 bg-[#EAE7FF]/60 text-[#6541F5] text-[10px] font-bold">
+                      Syllabus Grounded
+                    </Badge>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs font-semibold",
-                        asg.isCompleted
-                          ? "border-[#19B99A]/40 text-[#19B99A] bg-[#19B99A]/10"
-                          : "border-border text-muted-foreground"
-                      )}
-                    >
-                      {asg.isCompleted ? "Completed" : "Pending"}
-                    </Badge>
+                  <div>
+                    <h3 className="font-bold text-base text-foreground group-hover:text-[#6541F5] transition-colors">
+                      Ask AI Assistant
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-medium mt-1 leading-relaxed">
+                      Instant concept clarity, step-by-step diagnostic breakdown, and village analogies.
+                    </p>
+                  </div>
 
-                    <Button
-                      asChild
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs font-bold text-[#6541F5] hover:bg-[#6541F5]/10 h-8 px-3"
+                  {/* Sample questions */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Common Doubts:
+                    </span>
+                    <Link
+                      to="/tutor"
+                      search={{ q: "Why is 1/2 + 1/3 not equal to 2/5?" }}
+                      className="text-[11px] text-[#6541F5] hover:underline block truncate font-medium bg-white/70 dark:bg-muted/40 p-1.5 rounded-lg border border-[#6541F5]/15"
                     >
-                      <Link to="/lesson/$id" params={{ id: asg.lessonId }}>
-                        {asg.isCompleted ? "Review" : "Start"}
-                      </Link>
-                    </Button>
+                      💡 Why is 1/2 + 1/3 ≠ 2/5?
+                    </Link>
+                    <Link
+                      to="/tutor"
+                      search={{ q: "How does a switch work in an electric circuit?" }}
+                      className="text-[11px] text-[#6541F5] hover:underline block truncate font-medium bg-white/70 dark:bg-muted/40 p-1.5 rounded-lg border border-[#6541F5]/15"
+                    >
+                      💡 How does a circuit switch work?
+                    </Link>
                   </div>
                 </div>
-              ))}
+
+                <div className="pt-4">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="w-full bg-[#6541F5] hover:bg-[#5230E8] text-white font-bold text-xs h-9 rounded-xl shadow-xs"
+                  >
+                    <Link to="/tutor">
+                      Ask AI Chatbot <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Card 2: Talk with VidyaVoice */}
+              <div className="rounded-2xl border border-[#CEF5EC] bg-[#F2FBF8] dark:bg-card dark:border-border p-4.5 flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all group">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#19B99A]/15 text-[#19B99A] flex items-center justify-center">
+                      <Mic className="w-5 h-5" />
+                    </div>
+                    <Badge variant="outline" className="border-[#19B99A]/30 bg-[#CEF5EC]/60 text-[#19B99A] text-[10px] font-bold">
+                      Hands-Free Voice
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-base text-foreground group-hover:text-[#19B99A] transition-colors">
+                      Talk with VidyaVoice
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-medium mt-1 leading-relaxed">
+                      Hands-free voice assistant. Speak in English, हिन्दी, or ಕನ್ನಡ for read-aloud lessons and practice.
+                    </p>
+                  </div>
+
+                  {/* Sample voice triggers */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Try Saying:
+                    </span>
+                    <div className="text-[11px] text-[#19B99A] font-medium bg-white/70 dark:bg-muted/40 p-1.5 rounded-lg border border-[#19B99A]/15 truncate">
+                      🎙️ "Start fractions quiz"
+                    </div>
+                    <div className="text-[11px] text-[#19B99A] font-medium bg-white/70 dark:bg-muted/40 p-1.5 rounded-lg border border-[#19B99A]/15 truncate">
+                      🎙️ "Open electric circuits"
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="w-full bg-[#19B99A] hover:bg-[#19B99A]/90 text-white font-bold text-xs h-9 rounded-xl shadow-xs"
+                  >
+                    <Link to="/voice">
+                      Talk with VidyaVoice <Volume2 className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Card 3: Go to Simulations */}
+              <div className="rounded-2xl border border-[#FFE2CC] bg-[#FFF8F2] dark:bg-card dark:border-border p-4.5 flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all group">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#FA6400]/15 text-[#FA6400] flex items-center justify-center">
+                      <Gamepad2 className="w-5 h-5" />
+                    </div>
+                    <Badge variant="outline" className="border-[#FA6400]/30 bg-[#FFE2CC]/60 text-[#FA6400] text-[10px] font-bold">
+                      Interactive Labs
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-base text-foreground group-hover:text-[#FA6400] transition-colors">
+                      Go to Simulations
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-medium mt-1 leading-relaxed">
+                      Experiment in virtual physics sandboxes, wire circuits, and visual fraction strip cutouts.
+                    </p>
+                  </div>
+
+                  {/* Quick Simulation shortcuts */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Active Sandboxes:
+                    </span>
+                    <Link
+                      to="/playlab"
+                      className="text-[11px] text-[#FA6400] hover:underline block truncate font-medium bg-white/70 dark:bg-muted/40 p-1.5 rounded-lg border border-[#FA6400]/15"
+                    >
+                      🎮 PlayLab Math & Physics Arena
+                    </Link>
+                    <Link
+                      to="/circuitverse"
+                      className="text-[11px] text-[#FA6400] hover:underline block truncate font-medium bg-white/70 dark:bg-muted/40 p-1.5 rounded-lg border border-[#FA6400]/15"
+                    >
+                      ⚡ CircuitVerse Electronics Lab
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="w-full bg-[#FA6400] hover:bg-[#e05800] text-white font-bold text-xs h-9 rounded-xl shadow-xs"
+                  >
+                    <Link to="/playlab">
+                      Launch Simulations <FlaskConical className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -535,36 +643,52 @@ export function StudentDashboardView() {
             </div>
           </div>
 
-          {/* 3. Small Achievements / Recent Accomplishments */}
-          <div className="rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-3">
+          {/* 3. Quick Doubt & Assistant Bar */}
+          <div className="rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-3.5">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
-                <Trophy className="w-4 h-4 text-[#FA6400]" /> Recent Achievements
+                <Sparkles className="w-4 h-4 text-[#6541F5]" /> Quick Doubt Solver
               </h3>
-              <Link to="/rewards" className="text-xs font-bold text-[#6541F5] hover:underline">
-                Rewards
-              </Link>
+              <Badge variant="outline" className="text-[10px] text-[#6541F5] border-[#6541F5]/30">
+                AI + Voice
+              </Badge>
             </div>
 
-            <div className="space-y-2">
-              {unlockedAchievements.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-border/80 bg-background/50 p-2.5 flex items-center gap-3"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[#FA6400]/10 text-[#FA6400] flex items-center justify-center shrink-0">
-                    <Award className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="font-bold text-xs text-foreground block truncate">
-                      {item.name}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground block truncate">
-                      {item.desc}
-                    </span>
-                  </div>
-                </div>
-              ))}
+            <p className="text-xs text-muted-foreground">
+              Type any question from your NCERT Class {studentClass} textbook:
+            </p>
+
+            <form onSubmit={handleQuickDoubtSubmit} className="flex gap-2">
+              <input
+                type="text"
+                value={quickDoubt}
+                onChange={(e) => setQuickDoubt(e.target.value)}
+                placeholder="Ask about fractions, circuits..."
+                className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#6541F5]"
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!quickDoubt.trim()}
+                className="bg-[#6541F5] text-white hover:bg-[#5230E8] h-8 px-3 rounded-xl font-bold text-xs shrink-0"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </Button>
+            </form>
+
+            <div className="pt-1 flex gap-2">
+              <Link
+                to="/voice"
+                className="flex-1 rounded-xl border border-[#19B99A]/30 bg-[#F2FBF8] dark:bg-[#19B99A]/10 p-2 text-center text-xs font-bold text-[#19B99A] hover:bg-[#19B99A]/20 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Mic className="w-3.5 h-3.5" /> Speak Query
+              </Link>
+              <Link
+                to="/playlab"
+                className="flex-1 rounded-xl border border-[#FA6400]/30 bg-[#FFF8F2] dark:bg-[#FA6400]/10 p-2 text-center text-xs font-bold text-[#FA6400] hover:bg-[#FA6400]/20 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Gamepad2 className="w-3.5 h-3.5" /> Simulation
+              </Link>
             </div>
           </div>
         </div>

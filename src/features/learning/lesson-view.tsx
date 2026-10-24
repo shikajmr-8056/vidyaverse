@@ -25,6 +25,8 @@ import {
   Gamepad2,
   Sparkles,
   Info,
+  Bot,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -653,7 +655,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             <div className="card-surface p-4.5 rounded-2xl border border-border shadow-sm space-y-2.5">
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#6541F5]">
                 <Gamepad2 className="h-4 w-4" />
-                <span>Related STEM Sandbox</span>
+                <span>Related STEM Sandbox & Simulation</span>
               </div>
               <h4 className="font-bold text-sm text-foreground">{lesson.stemActivity.title}</h4>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -661,11 +663,53 @@ export function LessonView({ lesson }: LessonViewProps) {
               </p>
               <Button asChild size="sm" className="w-full bg-[#19B99A] text-white hover:bg-[#19B99A]/90 text-xs font-bold mt-1">
                 <Link to={lesson.stemActivity.route as any}>
-                  Open {lesson.stemActivity.badge} →
+                  Open {lesson.stemActivity.badge} Simulation →
                 </Link>
               </Button>
             </div>
           )}
+
+          {/* Ask AI Assistant about this Lesson */}
+          <div className="card-surface p-4.5 rounded-2xl border border-[#6541F5]/25 bg-[#F5F5FF] dark:bg-card shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#6541F5]">
+                <Bot className="h-4 w-4" />
+                <span>Ask AI Assistant</span>
+              </div>
+              <Badge variant="outline" className="border-[#6541F5]/30 bg-card text-[#6541F5] text-[10px] font-bold">
+                Doubts?
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Have doubts on {lesson.title}? Concept Detective explains step-by-step with village analogies.
+            </p>
+            <Button asChild size="sm" className="w-full bg-[#6541F5] text-white hover:bg-[#5230E8] text-xs font-bold">
+              <Link to="/tutor" search={{ q: lesson.title }}>
+                Chat with AI Assistant <Bot className="h-3.5 w-3.5 ml-1" />
+              </Link>
+            </Button>
+          </div>
+
+          {/* Talk with VidyaVoice about this Lesson */}
+          <div className="card-surface p-4.5 rounded-2xl border border-[#19B99A]/25 bg-[#F2FBF8] dark:bg-card shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#19B99A]">
+                <Mic className="h-4 w-4" />
+                <span>Talk with VidyaVoice</span>
+              </div>
+              <Badge variant="outline" className="border-[#19B99A]/30 bg-card text-[#19B99A] text-[10px] font-bold">
+                Hands-Free
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Listen to audio read-aloud or practice queries in English, Hindi, and Kannada.
+            </p>
+            <Button asChild variant="outline" size="sm" className="w-full border-[#19B99A]/40 text-[#19B99A] hover:bg-[#19B99A]/10 text-xs font-bold">
+              <Link to="/voice">
+                Talk with VidyaVoice <Volume2 className="h-3.5 w-3.5 ml-1" />
+              </Link>
+            </Button>
+          </div>
 
           {/* Related Lessons in this Subject */}
           <Panel title="Related in this subject">
