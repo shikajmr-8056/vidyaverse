@@ -1,929 +1,578 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  Sparkles,
-  Flame,
-  Trophy,
-  Play,
-  BookOpen,
-  Gamepad2,
-  CircuitBoard,
-  Code2,
-  Bot,
-  Mic,
-  Award,
-  Network,
-  CheckCircle2,
-  Target,
-  ArrowRight,
-  RefreshCw,
-  Zap,
-  Lightbulb,
-  Clock,
-  Compass,
-  Check,
-  Calendar,
+  Bell, Search, ChevronDown, Play, BookOpen, Sparkles, Trophy,
+  RotateCcw, ArrowRight, CheckCircle2, ShieldCheck, Heart, Star,
+  Compass, Award, Lightbulb, Clock, Check
 } from "lucide-react";
-import { NetworkTag, DemoTag } from "@/components/vv/primitives";
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useDemo, levelFor, XP_PER_LEVEL } from "@/lib/demo-store";
-import {
-  achievements,
-  demoStudent,
-  lessons,
-  misconceptions,
-  getSubjectTheme,
-  type Lesson,
-} from "@/data/demo";
-import { StemStudioArt } from "@/components/vv/lesson-art";
+import { useDemo } from "@/lib/demo-store";
+import { demoStudent, lessons } from "@/data/demo";
+import { cn } from "@/lib/utils";
+
+// Academic Progress Dual Spline Chart Data matching reference image
+const academicProgressData = [
+  { month: "Feb", exams: 38, assignments: 68 },
+  { month: "Mar", exams: 52, assignments: 78 },
+  { month: "Apr", exams: 42, assignments: 35 },
+  { month: "May", exams: 80, assignments: 60, tag: "GPA 80" },
+  { month: "June", exams: 48, assignments: 78 },
+  { month: "July", exams: 62, assignments: 52 },
+];
 
 export function StudentDashboardView() {
   const d = useDemo();
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [activeCourseTab, setActiveCourseTab] = useState("Photography I");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeRightCard, setActiveRightCard] = useState("Photography 1");
+  const [monthlyFilter, setMonthlyFilter] = useState("Monthly Progress");
+  const [viewMode, setViewMode] = useState<"reference" | "stem">("reference");
 
-  // Level calculations
-  const currentLvl = levelFor(d.xp);
-  const currentLvlXp = d.xp % XP_PER_LEVEL;
-  const nextLvlPct = Math.min(100, Math.round((currentLvlXp / XP_PER_LEVEL) * 100));
+  // Filter courses based on search
+  const coursesList = [
+    {
+      id: "space-review",
+      title: "Space Review",
+      stemTitle: "What a Fraction Really Means",
+      duration: "2 Hours",
+      desc: "Compose a picture in regards to the negative space you use within it.",
+      stemDesc: "Understand numerator and denominator parts using circular food sharing.",
+      progress: 20,
+      lessonId: "fractions-intro",
+      iconType: "spiral",
+      buttonText: "Continue",
+      buttonStyle: "outline",
+    },
+    {
+      id: "reflections",
+      title: "Reflections",
+      stemTitle: "Electric Current & Closed Circuits",
+      duration: "3 Hours",
+      desc: "Using reflections is an excellent way of adding interest into your photograph.",
+      stemDesc: "Trace electron loops from battery terminals through switch and LED.",
+      progress: 50,
+      lessonId: "electric-circuits",
+      iconType: "candy",
+      buttonText: "Continue",
+      buttonStyle: "outline",
+    },
+    {
+      id: "patterns",
+      title: "Patterns",
+      stemTitle: "CodeBot Sequential Algorithms",
+      duration: "2.5 Hours",
+      desc: "Create abstract compositions and to make interesting scenes.",
+      stemDesc: "Program rover instructions step-by-step to avoid boundary barriers.",
+      progress: 0,
+      lessonId: "algorithms-steps",
+      iconType: "cone",
+      buttonText: "Start",
+      buttonStyle: "solid",
+    },
+  ];
 
-  // Determine the next incomplete lesson to continue learning
-  const incompleteLessons = lessons.filter((l) => !d.completed.includes(l.id));
-  const continueLesson: Lesson | undefined = incompleteLessons[0] ?? lessons[0];
-  const allLessonsDone = incompleteLessons.length === 0 && lessons.length > 0;
-
-  // Chapter progress for the continue lesson
-  const chapterLessons = continueLesson
-    ? lessons.filter(
-        (l) => l.chapter === continueLesson.chapter && l.subject === continueLesson.subject,
-      )
-    : [];
-  const chapterCompletedCount = chapterLessons.filter((l) => d.completed.includes(l.id)).length;
-  const chapterPct =
-    chapterLessons.length > 0
-      ? Math.round((chapterCompletedCount / chapterLessons.length) * 100)
-      : 0;
-
-  // Today's learning goal status (idempotent tracking)
-  const isGoalDone =
-    d.completedChallenges.includes("daily-goal-fractions") ||
-    d.completedChallenges.includes("daily-fractions-1");
-
-  const handleCompleteGoal = () => {
-    if (!isGoalDone) {
-      d.completeChallenge(
-        "daily-goal-fractions",
-        50,
-        "Completed daily Fractions Concept practice quiz",
-      );
-    }
-  };
-
-  const handleSyncNow = async () => {
-    setIsSyncing(true);
-    try {
-      await d.syncNow();
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // Subjects configuration
-  const subjectsList = [
-    { id: "Mathematics", name: "Mathematics" },
-    { id: "Science", name: "Science" },
-    { id: "Computing", name: "Computing" },
-    { id: "Social Science", name: "Social Science" },
-  ] as const;
-
-  // Saved offline packs
-  const savedPacks = Object.entries(d.downloads).filter(([, st]) => st === "saved");
-
-  // Recently completed lessons
-  const completedLessonsList = lessons.filter((l) => d.completed.includes(l.id));
+  const rightCoursesList = [
+    {
+      id: "drawing-1",
+      title: "Drawing I",
+      teacher: "Kayla Williams",
+      credits: "3 credits",
+      progress: 60,
+      color: "#F5A623",
+      icon: "🎨",
+    },
+    {
+      id: "intro-art-history",
+      title: "Intro to Art History",
+      teacher: "Kevin Lee",
+      credits: "3 credits",
+      progress: 40,
+      color: "#19B99A",
+      icon: "🏛️",
+    },
+    {
+      id: "photography-1",
+      title: "Photography 1",
+      teacher: "Krystal Gutierrez",
+      credits: "1 credit",
+      progress: 85,
+      highlighted: true,
+      color: "#5037ED",
+      icon: "📷",
+    },
+    {
+      id: "painting-1",
+      title: "Painting I",
+      teacher: "Kayla Williams",
+      credits: "1 credit",
+      progress: 25,
+      color: "#E95778",
+      icon: "🖌️",
+    },
+    {
+      id: "contemporary-art",
+      title: "Contemporary Art",
+      teacher: "Mayra Wu",
+      credits: "2 credits",
+      progress: 50,
+      color: "#42A5E8",
+      icon: "🎭",
+    },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto pb-12">
-      {/* =========================================================================
-          Clean Three-Part Dashboard Composition:
-          - Compact left sidebar (rendered by _shell layout)
-          - Spacious central learning area (8 cols on desktop)
-          - Contextual right-side progress and activity panel (4 cols on desktop)
-         ========================================================================= */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        {/* =====================================================================
-            1. CENTRAL LEARNING AREA (8 Columns on xl)
-           ===================================================================== */}
-        <div className="xl:col-span-8 space-y-8">
-          {/* A. Friendly, Concise Student Greeting */}
-          <section
-            aria-label="Welcome banner"
-            className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-          >
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <DemoTag>Student Portal</DemoTag>
-                <span className="text-xs font-semibold text-muted-foreground">
-                  Class {demoStudent.classLevel}{demoStudent.section} · {demoStudent.school}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-md bg-[#6541F5]/10 px-2 py-0.5 text-[10px] font-bold text-[#6541F5] dark:text-[#7C5CFA]">
-                  <Sparkles className="h-3 w-3" /> Term 2 Active
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-                Welcome back, {demoStudent.name}!
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                {allLessonsDone
-                  ? "Outstanding! You have completed all active curriculum modules. Review concepts or explore the STEM labs below."
-                  : `You've completed ${d.completed.length} of ${lessons.length} core curriculum lessons so far. Ready for your next adventure?`}
-              </p>
-            </div>
-
-            {/* Quick date & mode badge */}
-            <div className="shrink-0 flex sm:flex-col items-end gap-1.5 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Calendar className="h-3.5 w-3.5 text-primary" /> Today's Session
-              </span>
-              <span className="text-[11px] font-semibold text-foreground/80">
-                NCERT & State Aligned
-              </span>
-            </div>
-          </section>
-
-          {/* B. Continue Learning Hero Card */}
-          <section aria-label="Continue Learning">
-            <div className="flex flex-col justify-between rounded-2xl bg-gradient-to-br from-[#5230E8] via-[#6541F5] to-[#7C5CFA] p-6 text-white shadow-sm relative overflow-hidden min-h-[220px]">
-              {/* Subtle background cosmic vector accent */}
-              <div
-                className="absolute -right-8 -bottom-8 h-44 w-44 rounded-full bg-white/10 pointer-events-none blur-2xl"
-                aria-hidden="true"
-              />
-              <svg
-                viewBox="0 0 200 200"
-                className="absolute right-2 top-2 h-36 w-36 text-white/5 pointer-events-none stroke-current"
-                fill="none"
-                strokeWidth="1.5"
-                aria-hidden="true"
-              >
-                <circle cx="100" cy="100" r="70" strokeDasharray="4 3" />
-                <ellipse cx="100" cy="100" rx="90" ry="30" transform="rotate(-30 100 100)" strokeDasharray="3 2" />
-                <circle cx="150" cy="60" r="4" fill="currentColor" />
-                <circle cx="50" cy="140" r="3" fill="currentColor" />
-              </svg>
-
-              <div className="relative z-10 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white/20 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">
-                    Continue Learning
-                  </span>
-                  {continueLesson && (
-                    <span className="text-xs text-white/80 font-medium">
-                      {continueLesson.subject} · {continueLesson.chapter}
-                    </span>
-                  )}
+    <div className="w-full">
+      {/* Main Elevated White Surface Card matching the reference frame */}
+      <div className="bg-white rounded-[32px] sm:rounded-[36px] p-6 sm:p-8 lg:p-10 shadow-2xl border border-[#EDEDF5] text-[#1E1B39]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+          {/* ========================================================================= */}
+          {/* LEFT / CENTER COLUMN (8 Columns on lg)                                     */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-8 space-y-7">
+            {/* 1. Top Greeting Header with 3D Mascot Character */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+              <div className="flex items-center gap-4">
+                {/* 3D Illustrated Mascot Character (Student Avatar) */}
+                <div className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#FFE7D6] via-[#FFF3EA] to-[#EAE7FF] p-1 flex items-center justify-center shadow-xs">
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm select-none" aria-hidden="true">
+                    {/* Hair Buns */}
+                    <circle cx="28" cy="24" r="13" fill="#3D2314" />
+                    <circle cx="72" cy="24" r="13" fill="#3D2314" />
+                    <circle cx="28" cy="24" r="9" fill="#52321E" />
+                    <circle cx="72" cy="24" r="9" fill="#52321E" />
+                    {/* Head */}
+                    <ellipse cx="50" cy="40" rx="22" ry="22" fill="#99603D" />
+                    {/* Hair fringe */}
+                    <path d="M 28 32 Q 50 16 72 32 Q 50 25 28 32 Z" fill="#3D2314" />
+                    {/* Eyes */}
+                    <circle cx="41" cy="39" r="2.8" fill="#1C1008" />
+                    <circle cx="59" cy="39" r="2.8" fill="#1C1008" />
+                    <circle cx="42" cy="38" r="0.8" fill="#FFFFFF" />
+                    <circle cx="60" cy="38" r="0.8" fill="#FFFFFF" />
+                    {/* Eyebrows */}
+                    <path d="M 37 34 Q 41 32 45 34" stroke="#3D2314" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                    <path d="M 55 34 Q 59 32 63 34" stroke="#3D2314" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                    {/* Nose */}
+                    <ellipse cx="50" cy="44" rx="2" ry="1.5" fill="#7A482A" />
+                    {/* Smile */}
+                    <path d="M 44 49 Q 50 54 56 49" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                    {/* Neck */}
+                    <rect x="45" y="58" width="10" height="8" fill="#8A5433" rx="3" />
+                    {/* Tank Top (Yellow & Cyan trim) */}
+                    <path d="M 32 68 Q 50 72 68 68 L 74 100 L 26 100 Z" fill="#F5A623" />
+                    <path d="M 38 68 Q 50 71 62 68 L 60 74 Q 50 76 40 74 Z" fill="#19B99A" />
+                    {/* Arms with Hands on hips */}
+                    <path d="M 32 68 Q 18 78 24 94 Q 28 88 34 82" stroke="#99603D" strokeWidth="5" strokeLinecap="round" fill="none" />
+                    <path d="M 68 68 Q 82 78 76 94 Q 72 88 66 82" stroke="#99603D" strokeWidth="5" strokeLinecap="round" fill="none" />
+                  </svg>
                 </div>
 
-                {allLessonsDone ? (
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-snug">
-                      All curriculum modules completed! 🎉
-                    </h2>
-                    <p className="text-xs sm:text-sm text-white/85 max-w-lg mt-1 leading-relaxed">
-                      You're ahead of schedule, Ananya. You can revisit past lessons, take mastery
-                      checkpoints, or build guided projects in the STEM labs.
-                    </p>
-                  </div>
-                ) : continueLesson ? (
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-snug">
-                      {continueLesson.title}
-                    </h2>
-                    <p className="text-xs sm:text-sm text-white/85 max-w-lg mt-1 leading-relaxed">
-                      {continueLesson.objectives[0] ??
-                        `${continueLesson.type} · ${continueLesson.durationMin} min interactive lesson`}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="relative z-10 mt-6 pt-4 border-t border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                {continueLesson && !allLessonsDone && (
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-white/90">
-                      <span className="font-medium">Chapter progress</span>
-                      <span className="font-bold">
-                        {chapterCompletedCount} of {chapterLessons.length} lessons ({chapterPct}%)
-                      </span>
-                    </div>
-                    <div className="h-2 w-48 sm:w-56 overflow-hidden rounded-full bg-white/20">
-                      <div
-                        className="h-full rounded-full bg-white transition-all duration-300"
-                        style={{ width: `${chapterPct}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center gap-3">
-                  {continueLesson && (
-                    <Button
-                      asChild
-                      className="bg-white text-[#5230E8] hover:bg-white/90 font-bold text-xs shadow-sm h-10 px-4 min-h-[44px]"
-                    >
-                      <Link to="/lesson/$id" params={{ id: continueLesson.id }}>
-                        <Play className="h-4 w-4 mr-1.5 fill-[#5230E8]" />
-                        {allLessonsDone ? "Review Lesson" : "Resume Lesson"}
-                      </Link>
-                    </Button>
-                  )}
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="border-white/30 bg-transparent text-white hover:bg-white/10 text-xs font-semibold h-10 px-4 min-h-[44px]"
-                  >
-                    <Link to="/learn">Browse All Lessons</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* C. Today's Learning Goal Card */}
-          <section aria-label="Today's Learning Goal">
-            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFF0D5] text-[#F5A623]">
-                    <Target className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-foreground">Today's Learning Goal</h2>
-                    <p className="text-xs text-muted-foreground">Daily academic checkpoint</p>
-                  </div>
-                </div>
-                <Badge
-                  variant="outline"
-                  className="bg-[#FFF0D5] text-[#b48216] border-[#F5A623]/30 font-bold text-[10px] self-start sm:self-auto"
-                >
-                  +50 XP Reward
-                </Badge>
-              </div>
-
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                <div className="space-y-1.5 max-w-xl">
-                  <h3 className="text-sm font-bold text-foreground">
-                    Complete Fractions Practice Checkpoint
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Solve 4 interactive questions on comparing, multiplying, and visualizing fractions
-                    with equal shares.
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#1E1B39] tracking-tight">
+                    Welcome back!
+                  </h1>
+                  <p className="text-xs sm:text-sm text-[#7D7B93] font-medium mt-0.5 leading-snug">
+                    You've learned 80% of your goal this week! Keep it up and improve your results!
                   </p>
-                  <div className="flex items-center gap-3 pt-1">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Status:{" "}
-                      <strong className={isGoalDone ? "text-[#19B99A]" : "text-[#F5A623]"}>
-                        {isGoalDone ? "Accomplished (100%)" : "In Progress"}
-                      </strong>
-                    </span>
-                    <div className="h-1.5 w-32 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: isGoalDone ? "100%" : "30%",
-                          backgroundColor: isGoalDone ? "#19B99A" : "#F5A623",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="shrink-0 flex items-center gap-3">
-                  {isGoalDone ? (
-                    <div className="flex items-center gap-2 rounded-xl bg-[#DDF8EE] px-4 py-2.5 text-xs font-bold text-[#19B99A] border border-[#19B99A]/30">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      <span>Goal Accomplished! +50 XP</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row items-center gap-2">
-                      <Button
-                        asChild
-                        className="bg-[#F5A623] text-white hover:bg-[#e0951b] font-bold text-xs shadow-sm h-10 px-4 min-h-[44px]"
-                      >
-                        <Link to="/quiz/$id" params={{ id: "fractions" }}>
-                          Start Practice Quiz →
-                        </Link>
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={handleCompleteGoal}
-                        className="text-[11px] text-muted-foreground hover:text-foreground text-center font-medium transition-colors px-2 py-1"
-                      >
-                        (Mark complete)
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
-            </div>
-          </section>
 
-          {/* D. Explore Learning Experiences: 4 Core STEM Studios (Image-led Cards) */}
-          <section aria-labelledby="stem-heading" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 id="stem-heading" className="text-lg font-bold text-foreground">
-                  Explore Learning Experiences
+              {/* Date & Weather Widget */}
+              <div className="flex sm:flex-col items-start sm:items-end justify-between text-xs text-[#7D7B93]">
+                <div className="flex items-center gap-1.5 font-bold text-[#1E1B39]">
+                  <span>Thu, July 29, 2021</span>
+                  <span className="text-sm">🌤️</span>
+                </div>
+                <span className="font-semibold text-[11px] text-[#7D7B93]">10:48 AM</span>
+              </div>
+            </div>
+
+            {/* 2. Your Courses Section */}
+            <div className="space-y-4 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 className="text-xl sm:text-2xl font-black text-[#FA6400] tracking-tight">
+                  Your Courses
                 </h2>
-                <p className="text-xs text-muted-foreground">
-                  Hands-on virtual science, electronics, and creative coding studios
-                </p>
-              </div>
-              <Link
-                to="/learn"
-                className="text-xs font-semibold text-[#6541F5] hover:underline flex items-center gap-1"
-              >
-                <span>Curriculum</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* 1. Learn */}
-              <div className="rounded-2xl border border-border bg-card shadow-sm flex flex-col justify-between transition-all hover:border-[#6541F5]/40 hover:shadow-md overflow-hidden group">
-                <div>
-                  <StemStudioArt hub="learn" />
-                  <div className="p-4 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#6541F5] bg-[#EAE7FF] px-2 py-0.5 rounded-md">
-                        Syllabus
-                      </span>
-                      <span className="text-[11px] text-muted-foreground font-medium">13 Lessons</span>
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground group-hover:text-[#6541F5] transition-colors">
-                      Curriculum Library
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      Complete syllabus aligned to NCERT and State boards with offline packages.
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4 pt-0">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-between text-xs font-bold text-[#6541F5] hover:bg-[#EAE7FF]/50 h-8 px-2"
-                  >
-                    <Link to="/learn">
-                      <span>Browse Library</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
+                {/* Search Bar matching screenshot */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search"
+                    className="h-9 w-full rounded-xl bg-[#F7F7FC] border border-[#EDEDF5] pl-9 pr-3 text-xs text-[#1E1B39] placeholder:text-muted-foreground focus:outline-none focus:border-[#5037ED]"
+                  />
                 </div>
               </div>
 
-              {/* 2. PlayLab */}
-              <div className="rounded-2xl border border-border bg-card shadow-sm flex flex-col justify-between transition-all hover:border-[#F5A623]/40 hover:shadow-md overflow-hidden group">
-                <div>
-                  <StemStudioArt hub="playlab" />
-                  <div className="p-4 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#b48216] bg-[#FFF0D5] px-2 py-0.5 rounded-md">
-                        Games
-                      </span>
-                      <span className="text-[11px] text-muted-foreground font-medium">Math & Logic</span>
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground group-hover:text-[#F5A623] transition-colors">
-                      PlayLab Arenas
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      Math Ludo tournaments, CodeBot Mazes, and competitive number line challenges.
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4 pt-0">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-between text-xs font-bold text-[#b48216] hover:bg-[#FFF0D5]/50 h-8 px-2"
-                  >
-                    <Link to="/playlab">
-                      <span>Launch PlayLab</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                </div>
+              {/* Category Navigation Tabs */}
+              <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto pb-1 text-xs font-semibold border-b border-border/40 select-none no-scrollbar">
+                {[
+                  "Drawing I",
+                  "Intro to Art History",
+                  "Photography I",
+                  "Painting I",
+                  "Contemporary Art",
+                ].map((tab) => {
+                  const isActive = activeCourseTab === tab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveCourseTab(tab)}
+                      className={cn(
+                        "pb-2.5 transition-colors whitespace-nowrap",
+                        isActive
+                          ? "text-[#1E1B39] font-black border-b-2 border-[#1E1B39]"
+                          : "text-[#7D7B93] hover:text-[#1E1B39]"
+                      )}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* 3. CircuitVerse */}
-              <div className="rounded-2xl border border-border bg-card shadow-sm flex flex-col justify-between transition-all hover:border-[#19B99A]/40 hover:shadow-md overflow-hidden group">
-                <div>
-                  <StemStudioArt hub="circuitverse" />
-                  <div className="p-4 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#19B99A] bg-[#DDF8EE] px-2 py-0.5 rounded-md">
-                        Simulation
-                      </span>
-                      <span className="text-[11px] text-muted-foreground font-medium">Electronics</span>
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground group-hover:text-[#19B99A] transition-colors">
-                      CircuitVerse
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      Connect knife switches, resistors, and 9V cells to observe real Ohm's Law physics.
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4 pt-0">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-between text-xs font-bold text-[#19B99A] hover:bg-[#DDF8EE]/50 h-8 px-2"
-                  >
-                    <Link to="/circuitverse">
-                      <span>Open Circuit Lab</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
+              {/* 3 Course Cards in a Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {coursesList.map((course) => {
+                  return (
+                    <div
+                      key={course.id}
+                      className="rounded-2xl border border-[#EDEDF5] bg-white p-4.5 flex flex-col justify-between shadow-xs hover:border-[#5037ED]/40 transition-all hover:shadow-sm"
+                    >
+                      <div className="space-y-2.5">
+                        {/* Course Vector Graphic Icon */}
+                        <div className="flex items-center justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-[#F7F7FC] flex items-center justify-center p-1.5 border border-[#EDEDF5]">
+                            {course.iconType === "spiral" && (
+                              <svg viewBox="0 0 40 40" className="w-7 h-7">
+                                <circle cx="20" cy="20" r="14" fill="#FFE5EB" />
+                                <path
+                                  d="M 14 20 C 14 14 26 14 26 20 C 26 24 18 24 18 20 C 18 18 22 18 22 20"
+                                  stroke="#E95778"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  fill="none"
+                                />
+                              </svg>
+                            )}
+                            {course.iconType === "candy" && (
+                              <svg viewBox="0 0 40 40" className="w-7 h-7">
+                                <rect x="8" y="14" width="24" height="12" rx="6" fill="#F5A623" transform="rotate(-30 20 20)" />
+                                <circle cx="12" cy="15" r="4" fill="#00B4F0" />
+                                <circle cx="28" cy="25" r="4" fill="#00B4F0" />
+                              </svg>
+                            )}
+                            {course.iconType === "cone" && (
+                              <svg viewBox="0 0 40 40" className="w-7 h-7">
+                                <ellipse cx="20" cy="28" rx="10" ry="4" fill="#F5A623" />
+                                <ellipse cx="20" cy="22" rx="8" ry="3.5" fill="#42A5E8" />
+                                <ellipse cx="20" cy="16" rx="6" ry="3" fill="#E95778" />
+                                <circle cx="20" cy="11" r="3" fill="#5037ED" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
 
-              {/* 4. CodeVerse */}
-              <div className="rounded-2xl border border-border bg-card shadow-sm flex flex-col justify-between transition-all hover:border-[#42A5E8]/40 hover:shadow-md overflow-hidden group">
-                <div>
-                  <StemStudioArt hub="codeverse" />
-                  <div className="p-4 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#42A5E8] bg-[#DDF2FC] px-2 py-0.5 rounded-md">
-                        Coding
-                      </span>
-                      <span className="text-[11px] text-muted-foreground font-medium">Block & Python</span>
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground group-hover:text-[#42A5E8] transition-colors">
-                      CodeVerse
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      Snap visual logic blocks together to solve automated farming puzzles and see Python.
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4 pt-0">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-between text-xs font-bold text-[#42A5E8] hover:bg-[#DDF2FC]/50 h-8 px-2"
-                  >
-                    <Link to="/codeverse">
-                      <span>Start Coding</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>
+                        {/* Title and Hours */}
+                        <div>
+                          <h3 className="font-bold text-sm text-[#1E1B39] leading-snug">
+                            {viewMode === "stem" ? course.stemTitle : course.title}
+                          </h3>
+                          <span className="text-[11px] font-bold text-[#7D7B93] block mt-0.5">
+                            {course.duration}
+                          </span>
+                        </div>
 
-          {/* E. My Subjects: Course & Chapter Progress */}
-          <section aria-labelledby="subjects-heading" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 id="subjects-heading" className="text-lg font-bold text-foreground">
-                  My Subjects
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Course chapters, mastery progress, and next recommended lessons
-                </p>
-              </div>
-              <Link to="/learn" className="text-xs font-semibold text-[#6541F5] hover:underline">
-                View Full Library →
-              </Link>
-            </div>
+                        {/* Description */}
+                        <p className="text-[11px] text-[#7D7B93] leading-relaxed line-clamp-2">
+                          {viewMode === "stem" ? course.stemDesc : course.desc}
+                        </p>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {subjectsList.map((sub) => {
-                const theme = getSubjectTheme(sub.name);
-                const subLessons = lessons.filter((l) => l.subject === sub.name);
-                const subCompleted = subLessons.filter((l) => d.completed.includes(l.id)).length;
-                const subPct =
-                  subLessons.length > 0 ? Math.round((subCompleted / subLessons.length) * 100) : 0;
-                const nextSubLesson = subLessons.find((l) => !d.completed.includes(l.id));
-
-                return (
-                  <div
-                    key={sub.id}
-                    className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col justify-between transition-all hover:border-[#6541F5]/30"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span
-                          className="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-bold"
-                          style={{
-                            backgroundColor: theme.tint,
-                            color: theme.primary,
-                            border: `1px solid ${theme.border}40`,
-                          }}
-                        >
-                          {sub.name}
-                        </span>
-                        <span className="text-xs font-semibold text-muted-foreground">
-                          {subCompleted}/{subLessons.length} done ({subPct}%)
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 mb-4">
-                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{ width: `${subPct}%`, backgroundColor: theme.primary }}
-                          />
+                        {/* Progress Bar with Percentage Label */}
+                        <div className="space-y-1 pt-1">
+                          <div className="flex items-center justify-between text-[10px] text-[#7D7B93] font-semibold">
+                            <span>Progress</span>
+                            <span>{course.progress}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-[#EDEDF5] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#5037ED] rounded-full transition-all duration-300"
+                              style={{ width: `${course.progress}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-border/60">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                          {nextSubLesson ? "Recommended Next" : "Subject Status"}
-                        </p>
-                        {nextSubLesson ? (
-                          <div>
-                            <p className="text-xs font-bold text-foreground line-clamp-1">
-                              {nextSubLesson.title}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                              {nextSubLesson.chapter} · {nextSubLesson.durationMin}m
-                            </p>
-                          </div>
+                      {/* Action Button: Continue or Start */}
+                      <div className="pt-3.5 mt-2 flex justify-end">
+                        {course.buttonStyle === "solid" ? (
+                          <Button
+                            asChild
+                            size="sm"
+                            className="bg-[#5037ED] hover:bg-[#432BCF] text-white font-bold text-xs h-8 px-5 rounded-xl shadow-xs"
+                          >
+                            <Link to="/playlab">Start</Link>
+                          </Button>
                         ) : (
-                          <p className="text-xs font-medium text-[#19B99A] flex items-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> All chapters completed
-                          </p>
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="border border-[#5037ED] text-[#5037ED] hover:bg-[#5037ED]/5 font-bold text-xs h-8 px-4 rounded-xl"
+                          >
+                            <Link to="/lesson/$id" params={{ id: course.lessonId }}>
+                              Continue
+                            </Link>
+                          </Button>
                         )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-border/60">
-                      {nextSubLesson ? (
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-between text-xs font-semibold text-[#6541F5] hover:bg-[#EAE7FF]/50 p-2 h-8"
-                        >
-                          <Link to="/lesson/$id" params={{ id: nextSubLesson.id }}>
-                            <span>Study next</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-between text-xs font-semibold text-muted-foreground hover:bg-muted p-2 h-8"
-                        >
-                          <Link to="/learn">
-                            <span>Review topics</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* F. Practice & Revision (Concept Checkpoints) */}
-          <section aria-labelledby="practice-heading" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2
-                  id="practice-heading"
-                  className="text-lg font-bold text-foreground flex items-center gap-2"
-                >
-                  <Lightbulb className="h-4 w-4 text-[#F5A623]" /> Practice &amp; Revision
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Targeted concept checkpoints based on diagnostic checks and common misconceptions
-                </p>
-              </div>
-              <Link to="/tutor" className="text-xs font-semibold text-[#6541F5] hover:underline">
-                Ask AI Tutor →
-              </Link>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {misconceptions.slice(0, 2).map((m) => (
-                <div
-                  key={m.id}
-                  className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col justify-between"
-                >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <Badge
-                        variant="outline"
-                        className="bg-[#FFF0D5] text-[#b48216] border-[#F5A623]/30 text-[10px] font-semibold"
-                      >
-                        Concept Checkpoint
-                      </Badge>
-                      <span className="text-[11px] text-muted-foreground font-medium">
-                        Diagnostic Retry
-                      </span>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-bold text-foreground">{m.question}</h3>
-                      <p className="text-xs text-[#E95778] font-medium mt-0.5">
-                        Common misconception: {m.misconception}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl bg-muted/40 p-3 text-xs text-foreground/90 leading-relaxed border border-border/70">
-                      <span className="font-semibold text-primary">Concept Tip: </span>
-                      {m.why}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground truncate mr-2">
-                      Check: {m.practice.text}
-                    </span>
-                    <Button
-                      asChild
-                      size="sm"
-                      className="bg-[#6541F5] hover:bg-[#5230E8] text-white text-xs font-bold shrink-0"
-                    >
-                      <Link
-                        to="/tutor"
-                        search={{
-                          q: `Why is the answer to ${encodeURIComponent(m.question)} not ${encodeURIComponent(m.studentAnswer)}?`,
-                        }}
-                      >
-                        Solve with AI Tutor →
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* =====================================================================
-            2. CONTEXTUAL RIGHT PANEL (4 Columns on xl)
-            Inspired by the reference dashboard: Clean progress, achievements,
-            streak, and activity history summary.
-           ===================================================================== */}
-        <aside className="xl:col-span-4 space-y-6">
-          {/* Card 1: Learning Progress & Mastery Index */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Trophy className="h-4 w-4 text-[#6541F5]" /> Learning Mastery
-              </span>
-              <Badge
-                variant="outline"
-                className="bg-[#EAE7FF] text-[#6541F5] border-[#6541F5]/25 font-bold text-[10px]"
-              >
-                Level {currentLvl}
-              </Badge>
-            </div>
-
-            {/* Level Progress Meter */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="font-semibold text-foreground">Progress to Level {currentLvl + 1}</span>
-                <span className="font-bold text-[#6541F5]">{nextLvlPct}%</span>
-              </div>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#6541F5] rounded-full transition-all duration-500"
-                  style={{ width: `${nextLvlPct}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                {XP_PER_LEVEL - currentLvlXp} XP needed to reach Level {currentLvl + 1}
-              </p>
-            </div>
-
-            {/* Lifetime XP and Weekly Activity Breakdown */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="rounded-xl bg-muted/40 p-3 border border-border/80">
-                <p className="text-[11px] font-medium text-muted-foreground">Lifetime XP</p>
-                <p className="text-xl font-black text-foreground mt-0.5">
-                  {d.xp.toLocaleString("en-IN")}
-                </p>
-                <p className="text-[10px] text-muted-foreground">Permanent record</p>
-              </div>
-              <div className="rounded-xl bg-muted/40 p-3 border border-border/80">
-                <p className="text-[11px] font-medium text-muted-foreground">Weekly Quest</p>
-                <p className="text-xl font-black text-[#6541F5] mt-0.5">+{d.weeklyXp}</p>
-                <p className="text-[10px] text-muted-foreground">Class 7B ranking</p>
-              </div>
-            </div>
-
-            {/* Spendable Sparks Wallet */}
-            <div className="rounded-xl bg-[#FFF0D5]/50 border border-[#F5A623]/25 p-3 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-[#b48216] flex items-center gap-1">
-                  <Zap className="h-3.5 w-3.5 fill-[#F5A623]" /> Spendable Sparks
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  XP is never deducted when shopping
-                </p>
-              </div>
-              <span className="text-lg font-black text-[#F5A623]">{d.sparks} ⚡</span>
-            </div>
-
-            <div className="pt-2 border-t border-border">
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between text-xs font-bold text-[#6541F5] hover:bg-[#EAE7FF]/50 p-2 h-8"
-              >
-                <Link to="/rewards">
-                  <span>Open Rewards Bazaar ({d.sparks} Sparks)</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* Card 2: Active Streak & Weekly Cadence */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Flame className="h-4 w-4 text-[#E95778]" /> Active Learning Cadence
-              </span>
-              <span className="text-xs font-bold text-[#E95778]">{demoStudent.streakDays} Days 🔥</span>
-            </div>
-
-            <div className="flex items-center justify-between px-1">
-              {["M", "T", "W", "T", "F", "S", "S"].map((day, idx) => {
-                const isActive = idx < demoStudent.streakDays;
-                return (
-                  <div key={idx} className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-muted-foreground">{day}</span>
-                    <div
-                      className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        isActive
-                          ? "bg-[#EAE7FF] text-[#6541F5] border border-[#6541F5]/30 font-bold"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {isActive ? <Check className="h-3 w-3 stroke-[3]" /> : "·"}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="text-xs text-muted-foreground leading-relaxed pt-1">
-              Consistent daily study builds deep concept retention. Complete 1 lesson tomorrow to reach
-              a 7-day milestone badge.
-            </p>
-          </div>
-
-          {/* Card 3: Recent Unlocked Milestones */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Award className="h-4 w-4 text-[#F5A623]" /> Badges &amp; Milestones
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                {d.unlocked.length} of {achievements.length}
-              </span>
-            </div>
-
-            <div className="space-y-2.5">
-              {achievements
-                .filter((a) => d.unlocked.includes(a.id))
-                .slice(0, 3)
-                .map((a, i) => {
-                  const badgeColor = [
-                    "bg-[#FFF0D5] text-[#F5A623]",
-                    "bg-[#DDF2FC] text-[#42A5E8]",
-                    "bg-[#DDF8EE] text-[#19B99A]",
-                  ][i % 3]!;
-
-                  return (
-                    <div
-                      key={a.id}
-                      className="flex items-center gap-3 rounded-xl border border-border/80 bg-muted/20 p-2.5"
-                    >
-                      <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${badgeColor}`}
-                      >
-                        <Award className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate">{a.name}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{a.desc}</p>
                       </div>
                     </div>
                   );
                 })}
+              </div>
             </div>
 
-            <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">
-                Next: <strong>Week Streak (7 Days)</strong>
-              </span>
-              <Link to="/leaderboard" className="text-[#6541F5] font-semibold hover:underline">
-                Leaderboard →
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 4: Recently Completed Activities */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-primary" /> Recent Activity
-              </span>
-              <Link to="/progress" className="text-xs font-semibold text-primary hover:underline">
-                All History →
-              </Link>
-            </div>
-
-            {completedLessonsList.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">
-                No lessons completed yet. Start your first lesson today!
-              </p>
-            ) : (
-              <div className="space-y-2.5">
-                {completedLessonsList.slice(0, 3).map((l) => (
-                  <div
-                    key={l.id}
-                    className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border/70 bg-muted/20 text-xs"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-bold text-foreground truncate">{l.title}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {l.subject} · {l.durationMin} min
-                      </p>
-                    </div>
-                    <Link
-                      to="/lesson/$id"
-                      params={{ id: l.id }}
-                      className="shrink-0 text-[11px] font-bold text-[#19B99A] hover:underline flex items-center gap-1"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Review
-                    </Link>
+            {/* 3. Academic Progress Section Card */}
+            <div className="rounded-3xl border border-[#FFE7CC] bg-[#FFF8EE] p-5 sm:p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-4">
+                  <h3 className="font-bold text-base text-[#1E1B39]">Academic Progress</h3>
+                  {/* Legend: Purple Exams, Orange Assignments */}
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1.5 text-xs text-[#1E1B39] font-medium">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#7C5CFA]" /> Exams
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs text-[#1E1B39] font-medium">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#FA6400]" /> Assignments
+                    </span>
                   </div>
-                ))}
+                </div>
+
+                {/* Dropdown: Monthly Progress v */}
+                <div className="flex items-center gap-1 bg-white border border-[#EBE3D7] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#1E1B39] shadow-2xs self-start sm:self-auto cursor-pointer">
+                  <span>{monthlyFilter}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
               </div>
-            )}
+
+              {/* Dual Spline Curved Chart matching screenshot with floating GPA 80 tag */}
+              <div className="relative h-44 sm:h-48 w-full mt-2">
+                {/* Floating GPA 80 Pill Marker positioned directly over the May peak */}
+                <div className="absolute -top-1 left-[67%] -translate-x-1/2 z-10 flex flex-col items-center pointer-events-none">
+                  <div className="bg-[#7C5CFA] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md whitespace-nowrap">
+                    GPA 80
+                  </div>
+                  <div className="w-0 h-0 border-l-[3.5px] border-l-transparent border-r-[3.5px] border-r-transparent border-t-[4px] border-t-[#7C5CFA]" />
+                </div>
+
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={academicProgressData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="purpleGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#7C5CFA" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#7C5CFA" stopOpacity={0.0} />
+                      </linearGradient>
+                      <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#FA6400" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#FA6400" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F0E5D8" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      stroke="#8C8275"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      dy={5}
+                    />
+                    <YAxis
+                      stroke="#8C8275"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      domain={[0, 100]}
+                      ticks={[0, 20, 40, 60, 80, 100]}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: "12px",
+                        border: "1px solid #FFE7CC",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="assignments"
+                      stroke="#FA6400"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#orangeGrad)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="exams"
+                      stroke="#7C5CFA"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#purpleGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
 
-          {/* Card 5: Kalyan School Mesh & Offline Sync Status */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-foreground flex items-center gap-2">
-                <Network className="h-4 w-4 text-muted-foreground" /> School Mesh Hub
-              </span>
-              <NetworkTag status={d.networkMode} />
-            </div>
-
-            <div className="rounded-xl bg-muted/40 p-3 border border-border/80 text-xs space-y-1">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Cached offline:</span>
-                <span className="font-bold text-foreground">{savedPacks.length} packs ready</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Pending sync:</span>
-                <span className="font-bold text-primary">
-                  {d.pendingSyncCount > 0 ? `${d.pendingSyncCount} activities` : "All synced ✓"}
+          {/* ========================================================================= */}
+          {/* RIGHT COLUMN (4 Columns on lg)                                            */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* 1. Student Profile Header */}
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <h3 className="font-bold text-base text-[#1E1B39]">
+                  {viewMode === "reference" ? "Claire A. McHaggen" : demoStudent.name}
+                </h3>
+                <span className="text-xs text-[#7D7B93] font-medium">
+                  {viewMode === "reference" ? "Student" : `Class ${demoStudent.classLevel}${demoStudent.section} Student`}
                 </span>
               </div>
-              <div className="flex justify-between text-muted-foreground text-[10px] pt-1 border-t border-border/60">
-                <span>Last heartbeat:</span>
-                <span>{d.lastSyncTime}</span>
+
+              {/* Notification Bell with Red Badge Dot */}
+              <div className="relative p-1 text-[#1E1B39] hover:text-[#5037ED] cursor-pointer">
+                <Bell className="h-4.5 w-4.5" />
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-[#E95778]" />
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSyncNow}
-                disabled={isSyncing}
-                className="w-full text-xs font-bold text-primary border-primary/30 h-8"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isSyncing ? "animate-spin" : ""}`} />
-                {isSyncing ? "Syncing..." : "Sync Now"}
-              </Button>
-              <Button asChild variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground">
-                <Link to="/downloads">Downloads</Link>
-              </Button>
+            {/* 2. Donut Progress Meter Widget directly on white canvas */}
+            <div className="text-center flex flex-col items-center">
+              <div>
+                <h4 className="font-bold text-sm text-[#1E1B39]">
+                  {viewMode === "reference" ? "Art (B.A)" : "Science & Mathematics (NCERT)"}
+                </h4>
+                <span className="text-[11px] text-[#7D7B93] font-medium">
+                  {viewMode === "reference" ? "Until Dec 14, 2021" : "Term 1 Syllabus Completion"}
+                </span>
+              </div>
+
+              {/* Circular Donut Ring Meter */}
+              <div className="relative w-36 h-36 my-2.5 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                  {/* Background Track */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#ECECF8"
+                    strokeWidth="8"
+                  />
+                  {/* Progress Arc */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#5037ED"
+                    strokeWidth="8"
+                    strokeDasharray="251.2"
+                    strokeDashoffset={251.2 * (1 - 0.65)}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                {/* Donut Center Text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-3xl font-black text-[#1E1B39] tracking-tight leading-none">
+                    65%
+                  </span>
+                  <span className="text-[10px] text-[#7D7B93] font-bold mt-1">
+                    Semester I
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. List of 5 Subject / Course Cards */}
+            <div className="space-y-3">
+              {rightCoursesList.map((course) => {
+                const isHighlighted = course.highlighted;
+                return (
+                  <div
+                    key={course.id}
+                    onClick={() => setActiveRightCard(course.title)}
+                    className={cn(
+                      "rounded-2xl p-3.5 transition-all cursor-pointer relative overflow-hidden",
+                      isHighlighted
+                        ? "bg-gradient-to-r from-[#5037ED] to-[#6541F5] text-white shadow-xl shadow-[#5037ED]/35"
+                        : "bg-[#FAFAFC] border border-[#EDEDF5] text-[#1E1B39] hover:border-[#5037ED]/30"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center text-sm",
+                            isHighlighted ? "bg-white/20 text-white" : "bg-white border border-[#EDEDF5]"
+                          )}
+                        >
+                          {course.icon}
+                        </div>
+                        <div>
+                          <h5
+                            className={cn(
+                              "font-bold text-xs leading-snug",
+                              isHighlighted ? "text-white" : "text-[#1E1B39]"
+                            )}
+                          >
+                            {course.title}
+                          </h5>
+                          <span
+                            className={cn(
+                              "text-[10px] font-medium block",
+                              isHighlighted ? "text-white/80" : "text-[#7D7B93]"
+                            )}
+                          >
+                            Teacher: {course.teacher}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span
+                        className={cn(
+                          "text-[10px] font-semibold shrink-0",
+                          isHighlighted ? "text-white/90" : "text-[#7D7B93]"
+                        )}
+                      >
+                        {course.credits}
+                      </span>
+                    </div>
+
+                    {/* Progress Line */}
+                    <div className="mt-2.5 h-1 w-full rounded-full bg-black/10 overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full",
+                          isHighlighted ? "bg-white" : "bg-[#5037ED]"
+                        )}
+                        style={{ width: `${course.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </aside>
+        </div>
       </div>
     </div>
   );

@@ -70,9 +70,16 @@ function Shell() {
     ? "Lesson"
     : current?.label[demo.language] ?? "Home";
 
+  const isDashboard = pathname === "/dashboard";
+
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
+      <div
+        className={cn(
+          "min-h-screen transition-colors duration-200",
+          isDashboard ? "bg-[#4834D4] text-white" : "bg-background text-foreground"
+        )}
+      >
         {/* Skip to main content for accessibility */}
         <a
           href="#main-content"
@@ -142,20 +149,25 @@ function Shell() {
             sidebarCollapsed ? "sm:pl-20" : "sm:pl-64",
           )}
         >
-          {/* Sticky Top Header */}
-          <AppHeader
-            pageTitle={pageTitle}
-            sidebarCollapsed={sidebarCollapsed}
-            onToggleSidebar={handleToggleSidebar}
-            mobileDrawerOpen={mobileDrawerOpen}
-            onOpenMobileDrawer={setMobileDrawerOpen}
-            onOpenCommandPalette={() => setCmdOpen(true)}
-          />
+          {/* Sticky Top Header (rendered on non-dashboard pages) */}
+          {!isDashboard && (
+            <AppHeader
+              pageTitle={pageTitle}
+              sidebarCollapsed={sidebarCollapsed}
+              onToggleSidebar={handleToggleSidebar}
+              mobileDrawerOpen={mobileDrawerOpen}
+              onOpenMobileDrawer={setMobileDrawerOpen}
+              onOpenCommandPalette={() => setCmdOpen(true)}
+            />
+          )}
 
           {/* Page Content Outlet */}
           <main
             id="main-content"
-            className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 sm:pb-8"
+            className={cn(
+              "flex-1 w-full mx-auto pb-24 sm:pb-8",
+              isDashboard ? "p-3 sm:p-5 lg:p-6 max-w-[1560px]" : "p-4 md:p-6 lg:p-8 max-w-7xl"
+            )}
           >
             <Outlet />
           </main>
