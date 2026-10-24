@@ -1,0 +1,208 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * VidyaVerse Purple & Lavender Design System:
+ * Primary purple: #6541F5
+ * Deep purple: #5230E8
+ * Lavender: #EAE7FF
+ * Background: #F5F5FA
+ * Main text: #26263A
+ * Secondary text: #77778D
+ * Borders: #E7E7EF
+ * Accents: Blue #42A5E8, Teal #19B99A, Green #28B987, Pink #E95778, Orange #F5A623
+ */
+
+@theme inline {
+  --font-sans: "Inter", "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Lexend", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-purple: #6541F5;
+  --color-purple-deep: #5230E8;
+  --color-lavender: #EAE7FF;
+  --color-blue: #42A5E8;
+  --color-blue-soft: #DDF2FC;
+  --color-teal: #19B99A;
+  --color-teal-soft: #DDF8EE;
+  --color-green: #28B987;
+  --color-green-soft: #DDF8EE;
+  --color-pink: #E95778;
+  --color-pink-soft: #FCE5EB;
+  --color-orange: #F5A623;
+  --color-orange-soft: #FFF0D5;
+  --color-success: #28B987;
+  --color-success-soft: #DDF8EE;
+  --color-warning: #F5A623;
+  --color-warning-soft: #FFF0D5;
+  --color-destructive: #E95778;
+  --color-destructive-soft: #FCE5EB;
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-card: var(--card-shadow);
+  --shadow-purple-glow: 0 4px 20px -2px rgba(101, 65, 245, 0.25);
+  --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 2px 8px -2px rgba(101, 65, 245, 0.04);
+}
+
+/* Default: Light Mode (Vibrant & Clean Analytics Dashboard) */
+:root, html.light {
+  --radius: 0.75rem;
+  --background: #F5F5FA;
+  --foreground: #26263A;
+  --card: #FFFFFF;
+  --card-foreground: #26263A;
+  --popover: #FFFFFF;
+  --popover-foreground: #26263A;
+  --primary: #6541F5;
+  --primary-foreground: #FFFFFF;
+  --primary-soft: #EAE7FF;
+  --secondary: #EAE7FF;
+  --secondary-foreground: #5230E8;
+  --muted: #F3F3F8;
+  --muted-foreground: #77778D;
+  --accent: #F4F3FD;
+  --accent-foreground: #6541F5;
+  --border: #E7E7EF;
+  --input: #FFFFFF;
+  --ring: #6541F5;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #77778D;
+  --sidebar-primary: #6541F5;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F4F3FD;
+  --sidebar-accent-foreground: #6541F5;
+  --sidebar-border: #E7E7EF;
+  --sidebar-ring: #6541F5;
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 2px 10px -2px rgba(101, 65, 245, 0.04);
+}
+
+/* Optional Dark Theme: Charcoal surfaces with vivid multi-color accents */
+html.dark {
+  --radius: 0.75rem;
+  --background: #12121A;
+  --foreground: #F0F0FA;
+  --card: #1C1C2A;
+  --card-foreground: #F0F0FA;
+  --popover: #1C1C2A;
+  --popover-foreground: #F0F0FA;
+  --primary: #7C5CFA;
+  --primary-foreground: #FFFFFF;
+  --primary-soft: #7C5CFA22;
+  --secondary: #252538;
+  --secondary-foreground: #F0F0FA;
+  --muted: #1A1A28;
+  --muted-foreground: #9D9DB5;
+  --accent: #25253B;
+  --accent-foreground: #7C5CFA;
+  --border: #2A2A3E;
+  --input: #1A1A28;
+  --ring: #7C5CFA;
+  --sidebar: #161624;
+  --sidebar-foreground: #9D9DB5;
+  --sidebar-primary: #7C5CFA;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #25253B;
+  --sidebar-accent-foreground: #7C5CFA;
+  --sidebar-border: #2A2A3E;
+  --sidebar-ring: #7C5CFA;
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 0 1px 1px rgba(124, 92, 250, 0.1);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html.light {
+    color-scheme: light;
+  }
+  html.large-text {
+    font-size: 112.5%;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  html.dark body {
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(124, 92, 250, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(101, 65, 245, 0.04) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+  html.light body {
+    background-image: none;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@utility card-surface {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+@utility panel-feature {
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+}
+
+@utility dot-grid {
+  background-image: radial-gradient(rgba(101, 65, 245, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
