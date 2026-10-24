@@ -145,19 +145,6 @@ function HeroStudentArchShowcase() {
           />
         </div>
 
-        {/* Floating Badge 3 (Bottom-Left): "60% OFF / Premium+ / $160 / Year To Get All Access" */}
-        <div className="absolute bottom-5 left-4 sm:left-6 z-20 rounded-2xl bg-[#2563EB] text-white p-3.5 sm:p-4 shadow-2xl border border-white/20 w-[160px] sm:w-[175px] space-y-1 transition-transform group-hover:scale-[1.02]">
-          <span className="inline-block px-2 py-0.5 rounded-full bg-black/35 text-[9px] font-extrabold uppercase tracking-wider">
-            60% OFF
-          </span>
-          <div className="text-[11px] font-semibold text-blue-100">Premium+</div>
-          <div className="text-2xl sm:text-3xl font-black tracking-tight leading-none text-white">
-            $160
-          </div>
-          <div className="text-[9px] text-blue-100 font-medium leading-tight">
-            / Year To Get All Access
-          </div>
-        </div>
       </div>
     </div>
   );
