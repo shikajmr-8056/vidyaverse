@@ -11,10 +11,46 @@ import {
   resetN8nSession,
 } from "@/services/n8n-tutor";
 
+// In-memory WebStorage mock for Vitest Node environment
+const createMockStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: vi.fn((k: string) => store.get(k) ?? null),
+    setItem: vi.fn((k: string, v: string) => {
+      store.set(k, String(v));
+    }),
+    removeItem: vi.fn((k: string) => {
+      store.delete(k);
+    }),
+    clear: vi.fn(() => {
+      store.clear();
+    }),
+    get length() {
+      return store.size;
+    },
+    key: vi.fn((i: number) => Array.from(store.keys())[i] ?? null),
+  };
+};
+
+const mockLocalStorage = createMockStorage();
+const mockSessionStorage = createMockStorage();
+
+Object.defineProperty(globalThis, "localStorage", {
+  value: mockLocalStorage,
+  writable: true,
+  configurable: true,
+});
+
+Object.defineProperty(globalThis, "sessionStorage", {
+  value: mockSessionStorage,
+  writable: true,
+  configurable: true,
+});
+
 describe("n8n AI Agent Workflow Integration", () => {
   beforeEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
+    mockLocalStorage.clear();
+    mockSessionStorage.clear();
     vi.restoreAllMocks();
   });
 
