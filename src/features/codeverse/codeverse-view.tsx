@@ -1,11 +1,5 @@
 import { PageHeader } from "@/components/vv/primitives";
-import { ArcadeEmbed, ArcadeTab } from "@/components/vv/arcade-embed";
-
-const CODEVERSE_TABS: ArcadeTab[] = [
-  { id: "hub", label: "Code Studio Hub", route: "/codeverse", icon: "💻" },
-  { id: "learn", label: "Guided Learn Track", route: "/codeverse/learn", icon: "📘" },
-  { id: "challenge", label: "Challenge Arena", route: "/codeverse/challenge", icon: "🏆" },
-];
+import { ArcadeEmbed } from "@/components/vv/arcade-embed";
 
 export function CodeVerseView() {
   return (
@@ -18,8 +12,7 @@ export function CodeVerseView() {
       <ArcadeEmbed
         title="CodeVerse"
         defaultRoute="/codeverse"
-        tabs={CODEVERSE_TABS}
-        height="h-[calc(100vh-12.5rem)] min-h-[720px]"
+        height="h-[calc(100vh-13rem)] min-h-[720px]"
       />
     </div>
   );

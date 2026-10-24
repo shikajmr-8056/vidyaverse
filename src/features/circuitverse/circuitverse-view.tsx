@@ -1,9 +1,5 @@
 import { PageHeader } from "@/components/vv/primitives";
-import { ArcadeEmbed, ArcadeTab } from "@/components/vv/arcade-embed";
-
-const CIRCUITVERSE_TABS: ArcadeTab[] = [
-  { id: "studio", label: "Circuit Simulator Studio", route: "/circuitverse", icon: "⚡" },
-];
+import { ArcadeEmbed } from "@/components/vv/arcade-embed";
 
 export function CircuitVerseView() {
   return (
@@ -16,8 +12,7 @@ export function CircuitVerseView() {
       <ArcadeEmbed
         title="CircuitVerse"
         defaultRoute="/circuitverse"
-        tabs={CIRCUITVERSE_TABS}
-        height="h-[calc(100vh-12.5rem)] min-h-[720px]"
+        height="h-[calc(100vh-13rem)] min-h-[720px]"
       />
     </div>
   );
