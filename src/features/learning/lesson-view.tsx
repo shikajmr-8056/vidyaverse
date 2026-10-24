@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   ArrowLeft,
@@ -27,6 +27,8 @@ import {
   Info,
   Bot,
   Mic,
+  Send,
+  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +50,7 @@ interface LessonViewProps {
 
 export function LessonView({ lesson }: LessonViewProps) {
   const d = useDemo();
+  const navigate = useNavigate();
 
   // Chapter context & navigation
   const chapter = lessons.filter((l) => l.chapter === lesson.chapter);
@@ -78,6 +81,35 @@ export function LessonView({ lesson }: LessonViewProps) {
   // In-lesson Guided Practice interactive state
   const [practiceAnswer, setPracticeAnswer] = useState<number | null>(null);
   const [practiceSubmitted, setPracticeSubmitted] = useState(false);
+
+  // Interactive Doubt & Voice state
+  const [lessonDoubt, setLessonDoubt] = useState("");
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const handleAskDoubt = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lessonDoubt.trim()) return;
+    void navigate({ to: "/tutor", search: { q: lessonDoubt.trim() } });
+  };
+
+  const handleReadAloud = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        return;
+      }
+      const textToSpeak = `${lesson.title}. ${lesson.summary}. ${lesson.notes.slice(0, 2).join(". ")}`;
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.rate = 0.95;
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      setIsSpeaking(true);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      void navigate({ to: "/voice" });
+    }
+  };
 
   // Simulated video playback timer
   useEffect(() => {
@@ -306,9 +338,9 @@ export function LessonView({ lesson }: LessonViewProps) {
             {/* Tab Navigation Buttons */}
             <div className="flex flex-wrap gap-1.5 border-b border-border pb-2" role="tablist">
               {[
-                { id: "content", label: "Objectives & Notes", icon: BookOpen },
-                { id: "examples", label: "Worked Examples", icon: Lightbulb },
+                { id: "content", label: "Interactive Studio", icon: Sparkles },
                 { id: "practice", label: "Guided Practice", icon: CheckCircle2 },
+                { id: "examples", label: "Worked Examples", icon: Lightbulb },
                 { id: "transcript", label: "Full Transcript", icon: Languages },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -333,55 +365,177 @@ export function LessonView({ lesson }: LessonViewProps) {
               })}
             </div>
 
-            {/* Tab 1: Objectives & Notes */}
+            {/* Tab 1: Interactive Learning Studio: Simulation, AI Chatbot Doubt & VidyaVoice */}
             {activeTab === "content" && (
               <div className="space-y-5">
-                {/* Concept Summary & Learning Objectives */}
-                <Panel title="What you will learn">
-                  {lesson.summary && (
-                    <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
-                      {lesson.summary}
-                    </p>
-                  )}
-                  <ul className="space-y-2 text-xs">
-                    {lesson.objectives.map((obj) => (
-                      <li key={obj} className="flex items-start gap-2 text-foreground">
-                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#19B99A]" />
-                        <span className="leading-snug">{obj}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </Panel>
-
-                {/* Key Syllabus Notes */}
-                <Panel title="Core syllabus notes">
-                  <ol className="space-y-3">
-                    {lesson.notes.map((n, i) => (
-                      <li key={i} className="flex gap-3 text-sm text-foreground">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#EAE7FF] text-xs font-bold text-[#6541F5]">
-                          {i + 1}
+                {/* 1. Go to Simulation and all */}
+                <div className="rounded-2xl border border-[#FA6400]/30 bg-gradient-to-br from-[#FFF8F2] to-[#FFF0E6] dark:from-card dark:to-card p-5 shadow-sm space-y-3.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#FA6400]/15 text-[#FA6400] flex items-center justify-center">
+                        <Gamepad2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#FA6400]">
+                          Interactive STEM Sandbox
                         </span>
-                        <span className="leading-relaxed">{n}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </Panel>
-
-                {/* Key Term Definitions */}
-                {lesson.definitions && lesson.definitions.length > 0 && (
-                  <Panel title="Definitions & key terms">
-                    <div className="grid gap-2.5 sm:grid-cols-2">
-                      {lesson.definitions.map((def) => (
-                        <div key={def.term} className="rounded-xl border border-border bg-card p-3">
-                          <p className="font-bold text-xs text-[#6541F5]">{def.term}</p>
-                          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                            {def.explanation}
-                          </p>
-                        </div>
-                      ))}
+                        <h3 className="text-base font-bold text-foreground">
+                          {lesson.stemActivity?.title || "STEM Simulation Lab"}
+                        </h3>
+                      </div>
                     </div>
-                  </Panel>
-                )}
+                    <Badge variant="outline" className="border-[#FA6400]/40 bg-white/80 dark:bg-card text-[#FA6400] text-xs font-bold">
+                      Hands-on Simulation
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {lesson.stemActivity?.description ||
+                      "Experiment visually by manipulating simulation parameters, virtual wire circuits, and visual math models in real-time."}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                    <Button
+                      asChild
+                      className="bg-[#FA6400] hover:bg-[#e05800] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs"
+                    >
+                      <Link to={lesson.stemActivity?.route as any || "/playlab"}>
+                        Go to Simulation Lab <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="border-[#FA6400]/30 text-[#FA6400] hover:bg-[#FFE2CC]/40 text-xs font-semibold h-9 px-3 rounded-xl"
+                    >
+                      <Link to="/playlab">
+                        <FlaskConical className="mr-1.5 h-3.5 w-3.5" /> All Simulations
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 2. Ask Doubt with Chatbot */}
+                <div className="rounded-2xl border border-[#6541F5]/25 bg-gradient-to-br from-[#F7F5FE] to-[#F0EDFE] dark:from-card dark:to-card p-5 shadow-sm space-y-3.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#6541F5]/15 text-[#6541F5] flex items-center justify-center">
+                        <Bot className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#6541F5]">
+                          Concept Detective AI
+                        </span>
+                        <h3 className="text-base font-bold text-foreground">
+                          Ask Doubt with Chatbot
+                        </h3>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="border-[#6541F5]/30 bg-white/80 dark:bg-card text-[#6541F5] text-xs font-bold">
+                      Grounded in NCERT
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Have doubts about <strong>{lesson.title}</strong>? Concept Detective explains misconceptions step-by-step using relatable village analogies.
+                  </p>
+
+                  {/* Quick Doubt Input Form */}
+                  <form onSubmit={handleAskDoubt} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={lessonDoubt}
+                      onChange={(e) => setLessonDoubt(e.target.value)}
+                      placeholder={`Ask any doubt about ${lesson.title}...`}
+                      className="flex-1 rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#6541F5]"
+                    />
+                    <Button
+                      type="submit"
+                      disabled={!lessonDoubt.trim()}
+                      className="bg-[#6541F5] hover:bg-[#5230E8] text-white font-bold text-xs h-10 px-4 rounded-xl shadow-xs shrink-0"
+                    >
+                      <Send className="w-3.5 h-3.5 mr-1" /> Ask Chatbot
+                    </Button>
+                  </form>
+
+                  {/* Common Doubt Chips */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Suggested Doubts for this Lesson:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        to="/tutor"
+                        search={{ q: `Explain ${lesson.title} with a village analogy` }}
+                        className="text-[11px] text-[#6541F5] hover:underline font-medium bg-white/80 dark:bg-muted/50 px-2.5 py-1 rounded-lg border border-[#6541F5]/20 shadow-2xs"
+                      >
+                        💡 Explain with village analogy
+                      </Link>
+                      <Link
+                        to="/tutor"
+                        search={{ q: `What are common mistakes students make in ${lesson.title}?` }}
+                        className="text-[11px] text-[#6541F5] hover:underline font-medium bg-white/80 dark:bg-muted/50 px-2.5 py-1 rounded-lg border border-[#6541F5]/20 shadow-2xs"
+                      >
+                        💡 Common student misconceptions
+                      </Link>
+                      <Link
+                        to="/tutor"
+                        search={{ q: `Give me a step-by-step practice question on ${lesson.title}` }}
+                        className="text-[11px] text-[#6541F5] hover:underline font-medium bg-white/80 dark:bg-muted/50 px-2.5 py-1 rounded-lg border border-[#6541F5]/20 shadow-2xs"
+                      >
+                        💡 Step-by-step practice check
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Talk with VidyaVoice */}
+                <div className="rounded-2xl border border-[#19B99A]/25 bg-gradient-to-br from-[#F2FBF8] to-[#E6F8F2] dark:from-card dark:to-card p-5 shadow-sm space-y-3.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#19B99A]/15 text-[#19B99A] flex items-center justify-center">
+                        <Mic className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#19B99A]">
+                          Hands-Free Audio & Voice
+                        </span>
+                        <h3 className="text-base font-bold text-foreground">
+                          Talk with VidyaVoice
+                        </h3>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="border-[#19B99A]/40 bg-white/80 dark:bg-card text-[#19B99A] text-xs font-bold">
+                      EN · HI · KN
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Learn without typing. Speak your doubts or listen to audio read-aloud explanations in English, Hindi, or Kannada.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                    <Button
+                      asChild
+                      className="bg-[#19B99A] hover:bg-[#19B99A]/90 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs"
+                    >
+                      <Link to="/voice">
+                        <Mic className="mr-1.5 h-3.5 w-3.5" /> Talk with VidyaVoice
+                      </Link>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleReadAloud}
+                      className="border-[#19B99A]/30 text-[#19B99A] hover:bg-[#CEF5EC]/40 text-xs font-semibold h-9 px-3 rounded-xl"
+                    >
+                      <Volume2 className="mr-1.5 h-3.5 w-3.5" />
+                      {isSpeaking ? "Pause Audio" : "Listen to Lesson"}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -709,35 +863,6 @@ export function LessonView({ lesson }: LessonViewProps) {
                 Talk with VidyaVoice <Volume2 className="h-3.5 w-3.5 ml-1" />
               </Link>
             </Button>
-          </div>
-
-          {/* Related Lessons in this Subject */}
-          <Panel title="Related in this subject">
-            <ul className="space-y-2 text-xs">
-              {lessons
-                .filter((l) => l.subject === lesson.subject && l.id !== lesson.id)
-                .slice(0, 3)
-                .map((l) => (
-                  <li key={l.id}>
-                    <Link
-                      to="/lesson/$id"
-                      params={{ id: l.id }}
-                      className="text-[#6541F5] font-semibold hover:underline block truncate"
-                    >
-                      {l.title}
-                    </Link>
-                    <span className="text-[11px] text-muted-foreground">{l.chapter}</span>
-                  </li>
-                ))}
-            </ul>
-          </Panel>
-
-          {/* Representative Curriculum Disclaimer */}
-          <div className="p-3 rounded-xl bg-muted/40 border border-border text-[11px] text-muted-foreground leading-relaxed">
-            <div className="flex items-center gap-1 font-bold text-foreground mb-1">
-              <Info className="h-3 w-3 text-[#6541F5]" /> Sample Curriculum Notice
-            </div>
-            Content shown is a verified representative syllabus sample aligned with NCERT & State Board learning standards.
           </div>
         </div>
       </div>
