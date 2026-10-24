@@ -11,7 +11,7 @@ interface ArcadeEmbedProps {
 export function ArcadeEmbed({
   title = "Studio Engine",
   defaultRoute,
-  height = "h-[calc(100vh-13rem)] min-h-[720px]",
+  height = "h-[calc(100vh-5.5rem)] min-h-[750px]",
   className,
 }: ArcadeEmbedProps) {
   const [isLoading, setIsLoading] = useState(true);

@@ -71,6 +71,10 @@ function Shell() {
     : current?.label[demo.language] ?? "Home";
 
   const isDashboard = pathname === "/dashboard";
+  const isStudio =
+    pathname.startsWith("/playlab") ||
+    pathname.startsWith("/circuitverse") ||
+    pathname.startsWith("/codeverse");
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -162,7 +166,12 @@ function Shell() {
           {/* Page Content Outlet */}
           <main
             id="main-content"
-            className="flex-1 w-full mx-auto pb-24 sm:pb-8 p-4 md:p-6 lg:p-8 max-w-7xl"
+            className={cn(
+              "flex-1 w-full mx-auto",
+              isStudio
+                ? "p-2 sm:p-3 max-w-[1750px] pb-6"
+                : "pb-24 sm:pb-8 p-4 md:p-6 lg:p-8 max-w-7xl"
+            )}
           >
             <Outlet />
           </main>
