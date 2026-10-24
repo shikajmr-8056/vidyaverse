@@ -6,7 +6,6 @@ import {
   CircuitBoard,
   Code2,
   Sparkles,
-  WifiOff,
   Languages,
   CheckCircle2,
   GraduationCap,
@@ -313,9 +312,6 @@ function LandingPage() {
 
               {/* Value Badges */}
               <div className="pt-3 flex flex-wrap items-center gap-5 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <WifiOff className="h-4 w-4 text-[#31B98A]" /> 100% Offline Mesh
-                </span>
                 <span className="flex items-center gap-1.5 font-medium">
                   <Languages className="h-4 w-4 text-[#6541F5]" /> Kannada, Hindi & English
                 </span>
