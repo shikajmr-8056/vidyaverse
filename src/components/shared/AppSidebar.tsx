@@ -202,17 +202,22 @@ export function AppSidebar({
         className,
       )}
     >
-      {/* Brand Header: e-Class. matching screenshot */}
+      {/* Brand Header: VidyaVerse */}
       <div
         className={cn(
           "flex h-16 items-center px-4 border-b border-white/10",
-          collapsed ? "justify-center" : "justify-between px-6",
+          collapsed ? "justify-center" : "justify-between px-5",
         )}
       >
-        <Link to="/" aria-label="e-Class VidyaVerse" className="flex items-center gap-1.5">
-          <span className="text-2xl font-black tracking-tight text-white font-display">
-            e-Class<span className="text-[#FA6400]">.</span>
-          </span>
+        <Link to="/" aria-label="VidyaVerse" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FA6400] to-[#FF8C38] flex items-center justify-center text-white font-black text-base shadow-sm shrink-0">
+            V
+          </div>
+          {!collapsed && (
+            <span className="text-xl font-black tracking-tight text-white font-display">
+              Vidya<span className="text-[#FA6400]">Verse</span>
+            </span>
+          )}
         </Link>
         {onToggleCollapse && !collapsed && (
           <Button
@@ -230,37 +235,19 @@ export function AppSidebar({
 
       {/* Navigation List */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {demo.role === "student" ? (
-          <div className="space-y-1.5">
-            {collapsed ? (
-              <nav className="flex flex-col items-center gap-1.5">
-                {studentNavItems.map((item) => (
-                  <CollapsedNavLinkItem key={item.to} item={item} onNavigate={onNavigate} />
-                ))}
-              </nav>
-            ) : (
-              <nav className="flex flex-col gap-1.5">
-                {studentNavItems.map((item) => (
-                  <NavLinkItem key={item.to} item={item} onNavigate={onNavigate} />
-                ))}
-              </nav>
+        {sections.map((section, idx) => (
+          <div key={section.id}>
+            {collapsed && idx > 0 && (
+              <div className="my-2 border-t border-white/10 mx-2" aria-hidden="true" />
             )}
+            <NavSection
+              title={section.title[demo.language]}
+              items={section.items}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
           </div>
-        ) : (
-          sections.map((section, idx) => (
-            <div key={section.id}>
-              {collapsed && idx > 0 && (
-                <div className="my-2 border-t border-white/10 mx-2" aria-hidden="true" />
-              )}
-              <NavSection
-                title={section.title[demo.language]}
-                items={section.items}
-                collapsed={collapsed}
-                onNavigate={onNavigate}
-              />
-            </div>
-          ))
-        )}
+        ))}
       </div>
 
       {/* Sidebar Footer matching screenshot */}
@@ -303,39 +290,12 @@ export function AppSidebar({
         </div>
       ) : (
         <div className="p-4 pt-1 flex flex-col gap-3">
-          {/* White Promotion / Action Card matching reference screenshot */}
-          <div className="rounded-2xl bg-white p-4 text-center text-[#1E1B39] shadow-lg flex flex-col items-center">
-            {/* 3D Toy Illustration */}
-            <div className="w-14 h-14 mb-2 flex items-center justify-center">
-              <svg viewBox="0 0 60 60" className="w-full h-full drop-shadow-xs">
-                <circle cx="30" cy="45" r="10" fill="#E95778" />
-                <circle cx="18" cy="48" r="7" fill="#F5A623" />
-                <circle cx="42" cy="48" r="7" fill="#42A5E8" />
-                <ellipse cx="30" cy="24" rx="12" ry="12" fill="#99603D" />
-                <circle cx="26" cy="23" r="1.5" fill="#1C1008" />
-                <circle cx="34" cy="23" r="1.5" fill="#1C1008" />
-                <path d="M 27 28 Q 30 31 33 28" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                <circle cx="30" cy="11" r="5" fill="#00B4F0" />
-                <path d="M 22 36 Q 30 39 38 36 L 40 45 L 20 45 Z" fill="#00B4F0" />
-              </svg>
-            </div>
-            <h4 className="font-extrabold text-xs text-[#1E1B39] leading-tight">Upgrade to Pro</h4>
-            <p className="text-[10px] text-[#7D7B93] mt-0.5">for more resources!</p>
-            <button
-              type="button"
-              onClick={() => void demo.syncNow()}
-              className="mt-2.5 w-full bg-[#00B4F0] hover:bg-[#009FDA] text-white font-bold text-xs py-1.5 px-3 rounded-xl shadow-xs transition-colors"
-            >
-              Upgrade Now
-            </button>
-          </div>
-
           {/* Sign Out Link */}
           <Link
             to="/auth"
-            className="flex items-center gap-2 text-white/75 hover:text-white text-xs font-semibold px-2 py-1 transition-colors"
+            className="flex items-center gap-2 text-white/80 hover:text-white text-sm font-semibold px-3 py-2 rounded-xl hover:bg-white/10 transition-colors"
           >
-            <span className="text-sm">←</span> Sign Out
+            <span className="text-base">←</span> Sign Out
           </Link>
         </div>
       )}

@@ -100,6 +100,8 @@ const initialSyncQueue: SyncQueueItem[] = [
 
 const initial: DemoState = {
   role: "student",
+  studentName: demoStudent.name,
+  studentClass: demoStudent.classLevel,
   theme: "light",
   networkMode: "online",
   pendingSyncCount: 2,

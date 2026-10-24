@@ -89,7 +89,9 @@ export function LearningLibraryView({ initialQuery = "" }: LearningLibraryViewPr
   // Filters state
   const [q, setQ] = useState(initialQuery);
   const [selectedSubject, setSelectedSubject] = useState<Subject | "All">("All");
-  const [cls, setCls] = useState<string>("All");
+  const [cls, setCls] = useState<string>(
+    d.role === "student" && d.studentClass ? String(d.studentClass) : "All"
+  );
   const [progressStatus, setProgressStatus] = useState<ProgressStatusFilter>("All");
   const [contentType, setContentType] = useState<string>("All");
   const [availability, setAvailability] = useState<"All" | "offline-only" | "online">("All");

@@ -213,6 +213,8 @@ export interface NavItem {
 // ==========================================
 export interface DemoState {
   role: UserRole;
+  studentName?: string;
+  studentClass?: number;
   theme: "dark" | "light";
   networkMode: NetworkMode;
   pendingSyncCount: number;

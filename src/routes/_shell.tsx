@@ -77,7 +77,7 @@ function Shell() {
       <div
         className={cn(
           "min-h-screen transition-colors duration-200",
-          isDashboard ? "bg-[#4834D4] text-white" : "bg-background text-foreground"
+          isDashboard ? "bg-[#F3F5FA] text-[#1E1B39] dark:bg-[#0D0C15] dark:text-foreground" : "bg-background text-foreground"
         )}
       >
         {/* Skip to main content for accessibility */}

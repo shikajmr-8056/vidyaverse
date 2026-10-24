@@ -20,10 +20,12 @@ import { Logo } from "@/components/vv/primitives";
 import { Button } from "@/components/ui/button";
 import { useDemo, type UserRole } from "@/lib/demo-store";
 import { demoStudent } from "@/data/demo";
+import { cn } from "@/lib/utils";
 
 interface FormState {
   name: string;
   identifier: string; // Roll number, Email, or Phone
+  classLevel: number;
   pin: string;
   school: string;
   linkedChild: string;
@@ -49,6 +51,7 @@ export function AuthView() {
   const [form, setForm] = useState<FormState>({
     name: "",
     identifier: "",
+    classLevel: demo.studentClass ?? 7,
     pin: "",
     school: "Kalyan Government Higher Primary School",
     linkedChild: "",
@@ -179,13 +182,16 @@ export function AuthView() {
 
     setIsLoading(true);
 
-    // Simulated authorization & role verification (500ms)
+    // Simulated authorization & role verification (400ms)
     setTimeout(() => {
       setIsLoading(false);
       demo.set("role", selectedRole!);
+      if (selectedRole === "student") {
+        demo.set("studentClass", form.classLevel || 7);
+        demo.set("studentName", form.name);
+      }
 
-      const roleObj = roles.find((r) => r.id === selectedRole);
-      setSuccessMessage(`Authorized as ${selectedRole}: Welcome, ${form.name}! Entering portal...`);
+      setSuccessMessage(`Welcome, ${form.name}! Entering portal...`);
 
       setTimeout(() => {
         if (selectedRole === "teacher") {
@@ -195,8 +201,8 @@ export function AuthView() {
         } else {
           navigate({ to: "/dashboard" });
         }
-      }, 700);
-    }, 550);
+      }, 500);
+    }, 400);
   };
 
   const currentRoleConfig = roles.find((r) => r.id === selectedRole);
@@ -235,20 +241,9 @@ export function AuthView() {
                   Choose Your Learning Portal
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
-                  VidyaVerse provides tailored experiences for students, educators, and families.
-                  Select your portal below to proceed with sign-in.
+                  Tailored learning experiences for students, educators, and families.
+                  Select your portal below to proceed.
                 </p>
-              </div>
-
-              {/* Demo Notice Banner */}
-              <div className="rounded-xl border border-dashed border-[#D8D5FF] dark:border-[#7C5CFA]/30 bg-[#F5F5FF] dark:bg-[#1A1A28] p-3.5 text-xs text-muted-foreground flex items-start gap-2.5">
-                <ShieldAlert className="h-4 w-4 text-[#6541F5] shrink-0 mt-0.5" />
-                <div className="leading-relaxed">
-                  <strong className="text-foreground">Offline Simulation Notice: </strong>
-                  This prototype runs client-side without a live authentication server. Selecting an
-                  account configures your session with verified demo credentials before launching
-                  the portal.
-                </div>
               </div>
 
               {/* 3 Distinct Role Cards */}
@@ -332,7 +327,7 @@ export function AuthView() {
                 </h2>
                 <p className="text-xs text-muted-foreground mt-1">
                   {selectedRole === "student"
-                    ? "Enter your class roll number and 4-digit PIN to access your learning journey."
+                    ? "Enter your details and select your class to access your curriculum."
                     : selectedRole === "teacher"
                       ? "Access your classroom roster, student diagnostic heatmaps, and offline sync logs."
                       : "Track your linked child's academic progress, chapter mastery, and school notices."}
@@ -406,6 +401,35 @@ export function AuthView() {
                     className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#6541F5]"
                   />
                 </div>
+
+                {/* Class Selection for Student */}
+                {selectedRole === "student" && (
+                  <div>
+                    <label className="block font-semibold text-xs text-foreground mb-1.5">
+                      Select Your Class (Grade)
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {[5, 6, 7, 8, 9, 10].map((cls) => (
+                        <button
+                          key={cls}
+                          type="button"
+                          onClick={() => setForm({ ...form, classLevel: cls })}
+                          className={cn(
+                            "h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center",
+                            form.classLevel === cls
+                              ? "bg-[#5037ED] text-white border-[#5037ED] shadow-xs shadow-[#5037ED]/25"
+                              : "bg-background border-border text-foreground hover:border-[#5037ED]/40"
+                          )}
+                        >
+                          Class {cls}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[11px] text-muted-foreground mt-1 block">
+                      Your lectures and curriculum will be strictly filtered for Class {form.classLevel}.
+                    </span>
+                  </div>
+                )}
 
                 {/* Identifier: Roll number, Email or Phone */}
                 <div>

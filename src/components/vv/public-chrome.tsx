@@ -16,19 +16,19 @@ export function PublicHeader() {
         {/* Product Navigation */}
         <nav
           aria-label="Public"
-          className="hidden items-center gap-6 text-xs font-semibold text-muted-foreground md:flex"
+          className="hidden items-center gap-7 text-sm font-semibold text-muted-foreground md:flex"
         >
           <Link to="/learn" className="hover:text-foreground transition-colors">
             Curriculum
           </Link>
           <Link to="/playlab" className="hover:text-foreground transition-colors">
-            PlayLab
+            PlayLab Games
           </Link>
           <Link to="/circuitverse" className="hover:text-foreground transition-colors">
-            CircuitVerse
+            Electronics Lab
           </Link>
           <Link to="/codeverse" className="hover:text-foreground transition-colors">
-            CodeVerse
+            Code Studio
           </Link>
           <Link to="/mesh" className="hover:text-foreground transition-colors">
             Offline Mesh
@@ -36,19 +36,19 @@ export function PublicHeader() {
         </nav>
 
         {/* Auth CTA Actions: Sign in and Get Started */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <Button
             asChild
             variant="ghost"
             size="sm"
-            className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+            className="text-sm font-semibold text-muted-foreground hover:text-foreground"
           >
             <Link to="/auth">Sign In</Link>
           </Button>
           <Button
             asChild
             size="sm"
-            className="bg-[#6541F5] hover:bg-[#5230E8] text-white text-xs font-bold shadow-sm shadow-[#6541F5]/25"
+            className="bg-[#5037ED] hover:bg-[#432BCF] text-white text-sm font-bold px-4 rounded-xl shadow-sm shadow-[#5037ED]/25"
           >
             <Link to="/auth" search={{ mode: "register" }}>
               Get Started
@@ -65,17 +65,14 @@ export function PublicFooter() {
 
   return (
     <footer className="border-t border-border bg-card text-card-foreground">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4 md:px-6 text-xs">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-4 md:px-6 text-sm">
         {/* Brand & Purpose */}
         <div className="space-y-3">
           <Logo />
-          <p className="text-muted-foreground leading-relaxed">
-            A Universe of Learning. Offline-first, gamified STEM platform built specifically for rural
-            and underserved schools across India.
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Interactive, curriculum-aligned STEM learning platform built for school students across India,
+            operating online and offline.
           </p>
-          <div className="text-[11px] font-mono text-muted-foreground/75">
-            Kalyan School Hub · v2.4 Prototype
-          </div>
         </div>
 
         {/* Learn Modules */}
