@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EffectualL - Wave 3D Module</title>
+    <!-- Load D3.js for the Knowledge Graph -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <!-- Using Lucide for modern icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --dark-blue: #012c59;
+            --orange: #fc5206;
+            --orange-bg: #fff7ed;
+            --cyan: #0dcfb2;
+            --cyan-dark: #0490a1;
+            --orange-light: #faa630;
+            --white: #ffffff;
+            --bg: #f8fafc;
+            --text-muted: #64748b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--dark-blue);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Floating Bottom Navigation Dock */
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 8px 16px;
+            border-radius: 40px;
+            display: flex;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            z-index: 2000;
+        }
+
+        .nav-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .nav-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--dark-blue);
+        }
+
+        .nav-btn i {
+            width: 22px;
+            height: 22px;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-btn.active {
+            background: var(--white);
+            color: var(--orange);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .nav-btn:hover i {
+            transform: scale(1.1);
+        }
+
+        /* Label Tooltip */
+        .nav-label {
+            position: absolute;
+            bottom: 60px;
+            background: var(--dark-blue);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
+        .nav-item:hover .nav-label {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        main { padding: 1rem; max-width: 1000px; margin: 0 auto; }
+        
+        .tab-content { display: none; animation: slideUp 0.4s ease-out; }
+        .tab-content.active { display: block; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+            border-top: 5px solid var(--cyan);
+        }
+
+        /* Sim Controls optimized for mobile */
+        .sim-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 5px 0;
+        }
+
+        .sim-btn {
+            padding: 8px 4px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        .sim-btn.active {
+            background: var(--cyan);
+            color: white;
+            border-color: var(--cyan);
+        }
+
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            height: 80vh;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* Graph Styles */
+        #graph-container { position: relative; width: 100%; height: 600px; }
+        #graph-svg {
+            width: 100%;
+            height: 100%;
+            background: #fafafa;
+            border-radius: 12px;
+            cursor: grab;
+        }
+
+        .node circle { stroke: #fff; stroke-width: 2px; transition: stroke-width 0.2s; }
+        .node:hover circle { stroke-width: 4px; stroke: var(--orange-light); }
+        .node text { font-size: 12px; font-weight: 600; pointer-events: none; fill: var(--dark-blue); }
+        .link { stroke: #cbd5e1; stroke-opacity: 0.6; stroke-width: 2px; }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(1, 44, 89, 0.95);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            pointer-events: none;
+            display: none;
+            max-width: 280px;
+            z-index: 2000;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            line-height: 1.5;
+        }
+
+        /* PREMIUM FLASHCARD STYLE */
+        .flashcard-wrapper {
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .flashcard {
+            height: 300px;
+            perspective: 1000px;
+            margin-bottom: 25px;
+            cursor: pointer;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            border-radius: 24px;
+            border: 2px solid var(--cyan);
+            background: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        .flashcard-back {
+            background: white;
+            transform: rotateY(180deg);
+        }
+
+        .fc-tag {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 800;
+            color: var(--dark-blue);
+            margin-bottom: 20px;
+        }
+
+        .fc-content {
+            font-size: 1.2rem;
+            font-weight: 700;
+            line-height: 1.4;
+            color: var(--dark-blue);
+        }
+
+        .fc-hint {
+            margin-top: 25px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .flashcard-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        /* Quiz */
+        .quiz-container { max-width: 700px; margin: 0 auto; }
+        .option-btn {
+            display: block; width: 100%; padding: 18px; background: #f8fafc;
+            border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer;
+            text-align: left; transition: all 0.2s; margin-bottom: 12px;
+            font-size: 1rem; font-weight: 500;
+        }
+        .option-btn:hover { border-color: var(--cyan); background: #f0fdfa; transform: translateX(5px); }
+        .option-btn.correct { background: #dcfce7; border-color: #22c55e; color: #166534; }
+        .option-btn.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .feedback { margin-top: 1.5rem; padding: 1.2rem; border-radius: 10px; display: none; font-weight: 600; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <main>
+       
+        <!-- Simulation Tab -->
+        <section id="module" class="tab-content active">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="font-size: 1.25rem;">Lab Simulation</h2>
+                    <a id="ext-link" href="https://effectuall.github.io/Simulations/Optics_Understanding_Waves" target="_blank" style="color: var(--cyan-dark); text-decoration: none; font-size: 0.8rem; font-weight: 700;">
+                        <i data-lucide="maximize" style="width:14px; vertical-align:middle;"></i> FULLSCREEN
+                    </a>
+                </div>
+
+                <div class="sim-selector">
+                    <button class="sim-btn active" onclick="changeSim('wave3d', this)">Wave 3D</button>
+                    <button class="sim-btn" onclick="changeSim('wave2d', this)">Wave 2D</button>
+                    <button class="sim-btn" onclick="changeSim('equation', this)">Equation</button>
+                </div>
+
+                <div class="iframe-container">
+                    <iframe id="sim-frame" src="https://effectuall.github.io/Simulations/Optics_Understanding_Waves"></iframe>
+                </div>
+            </div>
+        </section>
+        <!-- Simulation Tab -->
+        <!-- <section id="module" class="tab-content active">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="font-size: 1.25rem;">Interactive 3D Wave Module</h2>
+                    <a id="ext-link" href="https://effectuall.github.io/Simulations/Optics_Understanding_Waves" target="_blank" style="color: var(--cyan-dark); text-decoration: none; font-size: 0.8rem; font-weight: 700;">
+                        <i data-lucide="maximize" style="width:14px; vertical-align:middle;"></i> FULLSCREEN
+                    </a>
+                </div>
+
+                <div class="iframe-container">
+                    <iframe id="sim-frame" src="https://effectuall.github.io/Simulations/Optics_Understanding_Waves"></iframe>
+                </div>
+            </div>
+        </section> -->
+
+        <!-- Knowledge Graph Tab -->
+        <section id="graph" class="tab-content">
+            <div class="card">
+                <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">Concept Map</h2>
+                <div id="graph-container">
+                    <svg id="graph-svg"></svg>
+                    <div id="tooltip" class="tooltip"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Flashcards Tab -->
+        <section id="flashcards" class="tab-content">
+             <div class="card">
+                <h2 style="font-size: 1.25rem; margin-bottom: 5rem;">Let's Revise</h2>
+            <div class="flashcard-wrapper">
+                <div class="flashcard" id="current-card" onclick="this.classList.toggle('flipped')">
+                    <div class="flashcard-inner" id="card-inner-content">
+                        <!-- Content injected by JS -->
+                    </div>
+                </div>
+                <div class="flashcard-nav">
+                    <button class="nav-circle-btn" onclick="prevCard()"><i data-lucide="chevron-left"></i></button>
+                    <div class="fc-counter" id="fc-counter">1 / 3</div>
+                    <button class="nav-circle-btn" onclick="nextCard()"><i data-lucide="chevron-right"></i></button>
+                </div>
+            </div>
+            </div>
+        </section>
+
+        <!-- Quiz Tab -->
+        <section id="quiz" class="tab-content">
+            <div class="card">
+                <h2 style="font-size: 1.25rem; margin-bottom: 5rem;">Knowledge Check</h2>
+                <div id="quiz-body"></div>
+                <div id="quiz-feedback" style="margin-top:15px; padding:12px; border-radius:8px; display:none; text-align:center; font-weight:600;"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Dock -->
+    <nav class="bottom-nav">
+        <div class="nav-item">
+            <span class="nav-label">Lab</span>
+            <button class="nav-btn active" onclick="showTab('module', this)">
+                <i data-lucide="beaker"></i>
+            </button>
+        </div>
+        <div class="nav-item">
+            <span class="nav-label">Graph</span>
+            <button class="nav-btn" onclick="showTab('graph', this)">
+                <i data-lucide="network"></i>
+            </button>
+        </div>
+        <div class="nav-item">
+            <span class="nav-label">Flashcards</span>
+            <button class="nav-btn" onclick="showTab('flashcards', this)">
+                <i data-lucide="layers"></i>
+            </button>
+        </div>
+        <div class="nav-item">
+            <span class="nav-label">Quiz</span>
+            <button class="nav-btn" onclick="showTab('quiz', this)">
+                <i data-lucide="check-circle"></i>
+            </button>
+        </div>
+    </nav>
+    </main>
+
+    <script>
+         lucide.createIcons();
+
+          const simUrls = {
+            wave3d: "https://effectuall.github.io/Simulations/Optics_Understanding_Waves",
+            wave2d: "https://effectuall.github.io/Simulations/Games/InteractiveWave",
+            equation: "https://effectuall.github.io/Simulations/Games/InteractiveFormula"
+        };
+
+        function changeSim(type, btn) {
+            document.querySelectorAll('.sim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const url = simUrls[type];
+            document.getElementById('sim-frame').src = url;
+            document.getElementById('ext-link').href = url;
+        }
+
+        function showTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if(tabId === 'graph') initD3Graph();
+        }
+
+       const nodes = [
+            { id: 'Waves', group: 1, desc: 'A periodic disturbance of a medium that transfers energy without transferring matter.' },
+            { id: 'Transverse', group: 2, desc: 'Particles of the medium oscillate about fixed positions at right angles to the direction of wave travel.' },
+            { id: 'Longitudinal', group: 2, desc: 'Particles of the medium oscillate about fixed positions along the same line as the wave energy travels.' },
+            { id: 'Oscillation', group: 3, desc: 'Back and forth motion about a fixed equilibrium position.' },
+            { id: 'Frequency (Hz)', group: 4, desc: 'The number of waves per second passing through a given point. Measured in Hertz.' },
+            { id: 'Wavelength (λ)', group: 4, desc: 'The distance between the same point on two adjacent disturbances (e.g. crest to crest).' },
+            { id: 'Amplitude', group: 4, desc: 'The maximum distance between a crest or trough and the undisturbed position.' },
+            { id: 'Wave Speed (v)', group: 4, desc: 'The distance travelled by a wave crest or compression in one second (v = f × λ).' },
+            { id: 'Crests & Troughs', group: 5, desc: 'Crests are peaks of maximum positive displacement; Troughs are points of maximum negative displacement.' },
+            { id: 'Compression', group: 5, desc: 'A region in a longitudinal wave where the particles are closest together.' },
+            { id: 'Rarefaction', group: 5, desc: 'A region in a longitudinal wave where the particles are furthest apart.' }
+        ];
+
+        const links = [
+            { source: 'Waves', target: 'Transverse', value: 1 },
+            { source: 'Waves', target: 'Longitudinal', value: 1 },
+            { source: 'Transverse', target: 'Oscillation', value: 1 },
+            { source: 'Longitudinal', target: 'Oscillation', value: 1 },
+            { source: 'Waves', target: 'Frequency (Hz)', value: 1 },
+            { source: 'Waves', target: 'Wavelength (λ)', value: 1 },
+            { source: 'Waves', target: 'Amplitude', value: 1 },
+            { source: 'Waves', target: 'Wave Speed (v)', value: 1 },
+            { source: 'Transverse', target: 'Crests & Troughs', value: 1 },
+            { source: 'Longitudinal', target: 'Compression', value: 1 },
+            { source: 'Longitudinal', target: 'Rarefaction', value: 1 },
+            { source: 'Wave Speed (v)', target: 'Frequency (Hz)', value: 1 },
+            { source: 'Wave Speed (v)', target: 'Wavelength (λ)', value: 1 }
+        ];
+
+        
+
+        let graphInitialized = false;
+        function initD3Graph() {
+            if (graphInitialized) return;
+            graphInitialized = true;
+
+            const svg = d3.select("#graph-svg");
+            const tooltip = d3.select("#tooltip");
+            const container = document.getElementById('graph-container');
+            const width = container.clientWidth;
+            const height = 500;
+
+            const simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(120))
+                .force("charge", d3.forceManyBody().strength(-600))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            const link = svg.append("g")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .attr("class", "link");
+
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(nodes)
+                .enter().append("g")
+                .attr("class", "node")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended))
+                .on("mouseover", (event, d) => {
+                    tooltip.style("display", "block")
+                           .html(`<strong>${d.id}</strong><br/>${d.desc}`);
+                })
+                .on("mousemove", (event) => {
+                    const rect = container.getBoundingClientRect();
+                    tooltip.style("left", (event.clientX - rect.left + 15) + "px")
+                           .style("top", (event.clientY - rect.top + 15) + "px");
+                })
+                .on("mouseout", () => tooltip.style("display", "none"));
+
+            node.append("circle")
+                .attr("r", d => d.group === 1 ? 32 : 24)
+                .attr("fill", d => {
+                    if (d.group === 1) return "var(--dark-blue)";
+                    if (d.group === 2) return "var(--cyan)";
+                    if (d.group === 3) return "var(--orange)";
+                    return "var(--orange-light)";
+                });
+
+            node.append("text")
+                .attr("dy", 45)
+                .attr("text-anchor", "middle")
+                .text(d => d.id);
+
+            simulation.on("tick", () => {
+                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+
+            function dragstarted(event, d) { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+            function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+            function dragended(event, d) { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+        }
+
+     const flashcards = [
+            { q: "What is a Wave?", a: "A periodic disturbance of a medium that transfers energy without transferring matter." },
+            { q: "Transverse Wave", a: "Particles oscillate at right angles (perpendicular) to the direction of wave travel." },
+            { q: "Longitudinal Wave", a: "Particles oscillate along the same line (parallel) as the wave travels." },
+            { q: "Wave Speed (v)", a: "The speed calculated by: Frequency (f) × Wavelength (λ)." }
+        ];
+        let currentIdx = 0;
+
+        function updateFlashcard() {
+            const card = flashcards[currentIdx];
+            const content = document.getElementById('card-inner-content');
+            document.getElementById('current-card').classList.remove('flipped');
+            
+            content.innerHTML = `
+                <div class="flashcard-front">
+                    <div class="fc-tag">Question</div>
+                    <div class="fc-content">${card.q}</div>
+                    <div class="fc-hint">Click card to see answer</div>
+                </div>
+                <div class="flashcard-back">
+                    <div class="fc-tag">Answer</div>
+                    <div class="fc-content">${card.a}</div>
+                </div>
+            `;
+            document.getElementById('fc-counter').innerText = `${currentIdx + 1} / ${flashcards.length}`;
+        }
+
+        function nextCard() { currentIdx = (currentIdx + 1) % flashcards.length; updateFlashcard(); }
+        function prevCard() { currentIdx = (currentIdx - 1 + flashcards.length) % flashcards.length; updateFlashcard(); }
+
+
+        const questions = [
+            { q: "Frequency is measured in what unit?", opts: ["Metres", "Hertz (Hz)", "Seconds", "Joules"], correct: 1 },
+            { q: "In a longitudinal wave, oscillation is ___ to wave travel.", opts: ["Perpendicular", "At 45 degrees", "Parallel", "Circular"], correct: 2 }
+        ];
+        let curQ = 0;
+
+        function renderQuiz() {
+            const body = document.getElementById('quiz-body');
+            const q = questions[curQ];
+             body.innerHTML = `
+                <p style="font-weight: 600; margin-bottom: 20px;">Question ${curQ + 1} of ${questions.length}:</p>
+                <p style="font-size: 1.1rem; margin-bottom: 25px;">${q.q}</p>
+                <div class="options">${q.opts.map((o,i) => `<button class="option-btn" onclick="checkQ(${i})">${o}</button>`).join('')}</div>`;
+        }
+
+        function checkQ(idx) {
+            const fb = document.getElementById('quiz-feedback');
+            fb.style.display = 'block';
+            if(idx === questions[curQ].correct) {
+                fb.innerHTML = "✅ Correct!"; fb.style.background = "#dcfce7"; fb.style.color = "#166534";
+            } else {
+                fb.innerHTML = "❌ Incorrect. Light bends towards the normal in denser media."; fb.style.background = "#fee2e2"; fb.style.color = "#991b1b";
+            }
+            setTimeout(() => { curQ = (curQ + 1) % questions.length; renderQuiz(); fb.style.display='none'; }, 2000);
+        }
+
+        window.onload = () => { updateFlashcard(); renderQuiz(); };
+    </script>
+</body>
+</html>
