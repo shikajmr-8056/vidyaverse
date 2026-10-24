@@ -1,17 +1,15 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Bot, Send, Sparkles, Lightbulb, CheckCircle2,
-  BookOpen, Layers, ArrowRight, ShieldCheck, Search,
-  AlertTriangle, RotateCcw, HelpCircle, ExternalLink,
-  MessageSquare, Languages, ChevronRight, FileQuestion,
-  Info, Check, X
+  BookOpen, ShieldCheck, AlertTriangle, RotateCcw,
+  ExternalLink, Languages, Info, Paperclip,
+  Image as ImageIcon, Mic, MicOff, Share2, Plus, ArrowUp, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader, Panel, SimNote } from "@/components/vv/primitives";
 import { useDemo, type Lang } from "@/lib/demo-store";
-import { lessons, misconceptions } from "@/data/demo";
+import { misconceptions } from "@/data/demo";
 
 interface PracticeQuestion {
   question: string;
@@ -40,6 +38,10 @@ interface ChatMessage {
   isUncertain?: boolean;
   uncertaintyReason?: string;
   languageUsed?: Lang;
+  attachment?: {
+    name: string;
+    size: string;
+  } | undefined;
 }
 
 interface AiTutorViewProps {
@@ -209,7 +211,7 @@ const CURRICULUM_KNOWLEDGE: Array<{
   },
   {
     id: "plant-photosynthesis",
-    keywords: ["plant", "photosynthesis", "leaf", "sunlight", "chlorophyll", "stomata", "carbon dioxide", "प्रकाश संश्लेषण", "ದ್ಯುತಿಸಂಶ್ಲೇಷಣೆ"],
+    keywords: ["plant", "photosynthesis", "leaf", "sunlight", "chlorophyll", "stomata", "carbon dioxide", "moon", "प्रकाश संश्लेषण", "ದ್ಯುತಿಸಂಶ್ಲೇಷಣೆ"],
     lessonId: "plant-nutrition",
     lessonTitle: "Nutrition in Plants",
     chapter: "NCERT Class 7 Science · Ch 1",
@@ -265,48 +267,54 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   const [activeStepTab, setActiveStepTab] = useState<Record<string, "steps" | "analogy" | "practice">>({});
   const [selectedPracticeAnswers, setSelectedPracticeAnswers] = useState<Record<string, number>>({});
+  const [attachedFile, setAttachedFile] = useState<{ name: string; size: string } | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "msg-welcome",
-      sender: "tutor",
-      timestamp: "Just now",
-      text: selectedLang === "hi"
-        ? "नमस्ते अनन्या! मैं आपका कॉन्सेप्ट डिटेक्टिव (Concept Detective) हूँ। मैं सीधा उत्तर देने के बजाय यह समझाता हूँ कि अवधारणाएं कैसे काम करती हैं। भिन्न, विद्युत परिपथ या पौधों के पोषण से जुड़ा कोई भी प्रश्न पूछें!"
-        : selectedLang === "kn"
-        ? "ನಮಸ್ಕಾರ ಅನನ್ಯಾ! ನಾನು ನಿಮ್ಮ ಕಾನ್ಸೆಪ್ಟ್ ಡಿಟೆಕ್ಟಿವ್. ನಾನು ನೇರ ಉತ್ತರ ನೀಡುವ ಬದಲು ವಿಷಯದ ಆಳವಾದ ಕಾರಣವನ್ನು ವಿವರಿಸುತ್ತೇನೆ. ಭಿನ್ನರಾಶಿಗಳು, ವಿದ್ಯುತ್ ಸರ್ಕ್ಯೂಟ್ ಅಥವಾ ಸಸ್ಯಗಳ ಬಗ್ಗೆ ಪ್ರಶ್ನೆ ಕೇಳಿ!"
-        : "Namaste Ananya! I am your Concept Detective. Instead of giving direct answers to memorize, I diagnose learning bottlenecks, explain root concepts with relatable Indian analogies, and test your understanding step by step.",
-      hint: "Try asking: 'Why can't we add 1/2 + 1/3 as 2/5?' or 'Why does a bulb glow when the switch closes?'",
-      followUps: [
-        "Why is 1/2 + 1/3 not equal to 2/5?",
-        "Why does a closed switch make the bulb glow?",
-        "Which is bigger: 0.5 or 0.45?",
-        "How do plants make food without soil?"
-      ],
-      languageUsed: selectedLang
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Whether user has entered into an active conversation session
+  const hasUserMessages = messages.length > 0;
+
+  // Handle initial query if present
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      handleSendMessage(initialQuery);
     }
-  ]);
+  }, [initialQuery]);
+
+  // Auto-scroll on messages update
+  useEffect(() => {
+    if (hasUserMessages && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, status, hasUserMessages]);
 
   const handleSendMessage = (customText?: string) => {
     const textToSend = (customText || inputMsg).trim();
-    if (!textToSend) return;
+    if (!textToSend && !attachedFile) return;
 
     const userMessageId = `user-${Date.now()}`;
     const userMsg: ChatMessage = {
       id: userMessageId,
       sender: "user",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      text: textToSend,
+      text: textToSend || (attachedFile ? `Attached file: ${attachedFile.name}` : ""),
+      attachment: attachedFile || undefined,
       languageUsed: selectedLang
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setInputMsg("");
+    setAttachedFile(null);
     setStatus("loading");
 
     // Diagnostic syllabus resolution
     setTimeout(() => {
-      // Find matching curriculum knowledge entry
       const lowerText = textToSend.toLowerCase();
       const match = CURRICULUM_KNOWLEDGE.find((item) =>
         item.keywords.some((kw) => lowerText.includes(kw.toLowerCase()))
@@ -316,7 +324,6 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
       let reply: ChatMessage;
 
       if (match) {
-        // Grounded in approved NCERT lesson
         const isHi = selectedLang === "hi";
         const isKn = selectedLang === "kn";
 
@@ -349,7 +356,6 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
           languageUsed: selectedLang
         };
 
-        // Initialize view mode to steps
         setActiveStepTab((prev) => ({ ...prev, [tutorMessageId]: "steps" }));
         setStatus("ready");
         d.awardActivityXp("tutor-consultation", 15, "Consulted Concept Detective AI");
@@ -361,7 +367,6 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
         lowerText.includes("movie") ||
         lowerText.includes("cheat")
       ) {
-        // Explicit uncertainty / out-of-syllabus state
         reply = {
           id: tutorMessageId,
           sender: "tutor",
@@ -382,7 +387,6 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
         };
         setStatus("ready");
       } else {
-        // Fallback pedagogical grounding
         reply = {
           id: tutorMessageId,
           sender: "tutor",
@@ -416,7 +420,22 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
       }
 
       setMessages((prev) => [...prev, reply]);
-    }, 750);
+    }, 700);
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setInputMsg("");
+    setAttachedFile(null);
+    setStatus("ready");
+  };
+
+  const handleShare = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setShareSuccess(true);
+      setTimeout(() => setShareSuccess(false), 2500);
+    }
   };
 
   const handleSimulateError = () => {
@@ -439,102 +458,325 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="AI Tutor: Concept Detective"
-        description="Diagnoses learning bottlenecks, explains misconceptions using relatable Indian village analogies, and grounds answers in approved NCERT curriculum lessons."
-        eyebrow={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAE7FF] px-3 py-1 text-xs font-bold text-[#6541F5]">
-            <Bot className="h-3.5 w-3.5" /> Concept Detective AI
-          </span>
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAttachedFile({
+        name: file.name,
+        size: `${(file.size / 1024).toFixed(1)} KB`
+      });
+    }
+  };
+
+  const toggleSpeechRecognition = () => {
+    const win = window as any;
+    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      // Fallback if not supported
+      setInputMsg("Explain how fractions work with real-world examples");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = selectedLang === "hi" ? "hi-IN" : selectedLang === "kn" ? "kn-IN" : "en-IN";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          setInputMsg((prev) => (prev ? `${prev} ${transcript}` : transcript));
         }
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
+  };
+
+  // Educational prompt suggestions matching student learning
+  const promptSuggestions = [
+    {
+      title: "Understand a concept",
+      example: "Explain fractions with examples.",
+      query: "Why is 1/2 + 1/3 not equal to 2/5? Explain fractions with examples."
+    },
+    {
+      title: "Explore science",
+      example: "Why does the Moon change shape?",
+      query: "Why does the Moon change shape and how does sunlight reflect on it?"
+    },
+    {
+      title: "Solve a problem",
+      example: "Help me solve this algebra question.",
+      query: "Help me understand how to solve equations with balance and variables."
+    }
+  ];
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-140px)] w-full">
+      {/* 1. Header: Compact, aligned with page container */}
+      <header className="flex items-center justify-between py-3 border-b border-border/80 mb-4 px-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-xl bg-[#EAE7FF] flex items-center justify-center text-[#6541F5] shadow-xs">
+              <Bot className="h-4 w-4" />
+            </div>
+            <h1 className="text-base font-bold text-foreground tracking-tight">AI Assistant</h1>
+          </div>
+
+          {/* Language Selector */}
+          <div className="hidden sm:flex rounded-lg border border-border bg-muted/40 p-0.5 ml-2">
+            {[
+              { code: "en", label: "English" },
+              { code: "hi", label: "हिन्दी" },
+              { code: "kn", label: "ಕನ್ನಡ" }
+            ].map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setSelectedLang(l.code as Lang)}
+                className={`rounded-md px-2 py-0.5 text-xs font-semibold transition-all ${
+                  selectedLang === l.code
+                    ? "bg-[#6541F5] text-white shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Header Right Actions: New Chat & Share */}
+        <div className="flex items-center gap-2">
+          {shareSuccess && (
+            <Badge variant="outline" className="border-[#19B99A]/40 bg-[#DDF8EE]/80 text-[#19B99A] text-xs font-medium py-1">
+              Link copied!
+            </Badge>
+          )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleNewChat}
+            className="card-surface border-border hover:border-[#6541F5] hover:text-[#6541F5] text-xs font-semibold h-8 px-3"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1 text-[#6541F5]" /> New Chat
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleShare}
+            className="card-surface border-border hover:border-[#6541F5] hover:text-[#6541F5] text-xs font-semibold h-8 px-3"
+          >
+            <Share2 className="h-3.5 w-3.5 mr-1" /> Share
+          </Button>
+
+          <button
+            onClick={handleSimulateError}
+            className="text-[10px] text-muted-foreground hover:text-[#E95778] underline ml-1 hidden md:inline"
+            title="Simulate network or diagnostic timeout"
+          >
+            Timeout
+          </button>
+        </div>
+      </header>
+
+      {/* Hidden file input for attachment/image */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.txt"
+        onChange={handleFileUpload}
+        className="hidden"
       />
 
-      {/* Honest AI Disclaimer & Model Boundary */}
-      <div className="rounded-xl border border-[#6541F5]/20 bg-[#F5F5FF] dark:bg-[#6541F5]/10 p-4 text-xs space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 font-bold text-[#6541F5] dark:text-[#7C5CFA]">
-            <Info className="h-4 w-4 shrink-0" />
-            <span>Curriculum-Grounded Pedagogical Assistant · In-Browser Simulation</span>
+      {/* Main Content Area */}
+      {!hasUserMessages ? (
+        /* 2 & 3 & 4. Centered Welcome View with Composer & 3 Suggestion Cards */
+        <div className="flex-1 flex flex-col justify-center items-center py-6 md:py-12 px-2 max-w-[860px] mx-auto w-full">
+          {/* Centered Welcome Section */}
+          <div className="flex flex-col items-center text-center mb-7">
+            <div className="h-16 w-16 md:h-18 md:w-18 rounded-full bg-[#EAE7FF] border border-[#6541F5]/25 flex items-center justify-center text-[#6541F5] shadow-sm mb-4">
+              <Sparkles className="h-8 w-8 text-[#6541F5]" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
+              What can I help with?
+            </h2>
           </div>
-          <Badge variant="outline" className="border-[#6541F5]/30 bg-card dark:bg-[#6541F5]/20 text-[#6541F5] dark:text-[#7C5CFA] font-semibold text-[11px]">
-            No External Cloud LLM Connected
-          </Badge>
-        </div>
-        <p className="text-muted-foreground leading-relaxed text-[11px]">
-          <strong>Pedagogical Guarantee Notice:</strong> AI responses are educational scaffolding tools grounded in approved NCERT Class 6–8 units. Responses are not guaranteed to be 100% error-free. Always cross-verify with your teacher Mrs. Lakshmi or official school textbooks.
-        </p>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        {/* Left Column: Chat Conversation Container */}
-        <div className="lg:col-span-8 card-surface rounded-2xl border border-border p-5 shadow-sm flex flex-col justify-between min-h-[640px]">
-          {/* Header Controls: Language Selector & Mode Indicator */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <Languages className="h-4 w-4 text-[#6541F5]" /> Supported Languages:
-              </span>
-              <div className="flex rounded-lg border border-border bg-muted/40 p-0.5">
-                {[
-                  { code: "en", label: "English" },
-                  { code: "hi", label: "हिन्दी" },
-                  { code: "kn", label: "ಕನ್ನಡ" }
-                ].map((l) => (
+          {/* 3. Main Message Composer */}
+          <div className="w-full card-surface rounded-2xl md:rounded-3xl border border-border shadow-sm p-4 md:p-5 flex flex-col justify-between min-h-[155px] md:min-h-[165px] transition-all focus-within:border-[#6541F5] focus-within:ring-2 focus-within:ring-[#6541F5]/10">
+            {/* Top-left: Multiline text input */}
+            <div className="w-full">
+              <textarea
+                id="tutor-chat-input"
+                rows={3}
+                value={inputMsg}
+                onChange={(e) => setInputMsg(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Ask anything AI assistant"
+                className="w-full resize-none bg-transparent border-0 p-0 text-sm md:text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 leading-relaxed"
+                disabled={status === "loading"}
+              />
+
+              {/* Attachment Pill if a file is attached */}
+              {attachedFile && (
+                <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#EAE7FF]/70 border border-[#6541F5]/30 px-2.5 py-1 text-xs text-[#6541F5] mt-1 font-medium">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  <span>{attachedFile.name} ({attachedFile.size})</span>
                   <button
-                    key={l.code}
-                    onClick={() => setSelectedLang(l.code as Lang)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                      selectedLang === l.code
-                        ? "bg-[#6541F5] text-white shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    onClick={() => setAttachedFile(null)}
+                    className="hover:text-foreground ml-1"
+                    title="Remove attachment"
                   >
-                    {l.label}
+                    <X className="h-3 w-3" />
                   </button>
-                ))}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Controls Bar */}
+            <div className="flex items-center justify-between pt-3 border-t border-border/50 mt-2">
+              {/* Bottom-left: Attachment and Image upload */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  title="Attach file"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  title="Upload image"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Bottom-right: Microphone and Primary Send */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleSpeechRecognition}
+                  className={`p-2 rounded-xl transition-colors ${
+                    isListening
+                      ? "bg-[#E95778]/15 text-[#E95778] animate-pulse"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                  title={isListening ? "Listening... click to stop" : "Use microphone"}
+                >
+                  {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </button>
+
+                <Button
+                  id="tutor-ask-btn"
+                  size="sm"
+                  onClick={() => handleSendMessage()}
+                  disabled={status === "loading" || (!inputMsg.trim() && !attachedFile)}
+                  className="h-9 w-9 rounded-full bg-[#6541F5] text-white hover:bg-[#5230E8] p-0 flex items-center justify-center shadow-xs"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSimulateError}
-                className="text-[11px] text-muted-foreground hover:text-[#E95778] transition-colors underline"
-                title="Test how the assistant handles a network or diagnostic timeout"
-              >
-                Simulate Timeout
-              </button>
-            </div>
           </div>
 
-          {/* Messages Flow */}
-          <div className="my-4 space-y-5 overflow-y-auto max-h-[500px] pr-2">
+          {/* 4. Suggested Prompt Cards: Exactly 3 in one horizontal row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full mt-4">
+            {promptSuggestions.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSendMessage(item.query)}
+                className="card-surface rounded-xl border border-border p-3.5 text-left hover:border-[#6541F5] hover:bg-[#6541F5]/5 transition-all cursor-pointer group shadow-xs flex flex-col justify-between"
+              >
+                <div className="font-bold text-xs text-foreground group-hover:text-[#6541F5] transition-colors">
+                  {item.title}
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate mt-1">
+                  {item.example}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Subtle Grounding Disclosure */}
+          <div className="mt-8 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#19B99A]" />
+            <span>Strictly grounded in approved NCERT Class 6–8 Mathematics & Science curriculum.</span>
+          </div>
+        </div>
+      ) : (
+        /* 7. Active Conversation State: Central Column with Bottom Composer */
+        <div className="flex-1 flex flex-col justify-between max-w-[860px] mx-auto w-full">
+          {/* Conversation Stream */}
+          <div className="flex-1 space-y-4 py-4 overflow-y-auto pr-1">
+            {/* Honest AI Disclaimer Banner */}
+            <div className="rounded-xl border border-[#6541F5]/20 bg-[#F5F5FF] dark:bg-[#6541F5]/10 p-3 text-xs flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-[#6541F5] dark:text-[#7C5CFA] font-bold text-[11px]">
+                <Info className="h-4 w-4 shrink-0" />
+                <span>Curriculum-Grounded Pedagogical Assistant · In-Browser Memory</span>
+              </div>
+              <Badge variant="outline" className="border-[#6541F5]/30 bg-card text-[#6541F5] dark:text-[#7C5CFA] text-[10px]">
+                No Cloud LLM
+              </Badge>
+            </div>
+
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex gap-3 ${m.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 {m.sender === "tutor" && (
-                  <div className="h-9 w-9 rounded-xl bg-[#EAE7FF] flex items-center justify-center shrink-0 text-[#6541F5] shadow-xs">
-                    <Bot className="h-5 w-5" />
+                  <div className="h-8 w-8 rounded-xl bg-[#EAE7FF] flex items-center justify-center shrink-0 text-[#6541F5] shadow-xs mt-0.5">
+                    <Bot className="h-4 w-4" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-xl rounded-2xl p-4 text-xs space-y-3 ${
+                  className={`max-w-2xl rounded-2xl p-4 text-xs space-y-3 ${
                     m.sender === "user"
                       ? "bg-[#6541F5] text-white font-medium rounded-tr-none shadow-sm"
                       : "card-surface text-foreground border border-border rounded-tl-none shadow-sm"
                   }`}
                 >
-                  {/* Timestamp & Sender */}
                   <div className="flex items-center justify-between text-[10px] opacity-75 border-b border-current/10 pb-1">
                     <span className="font-semibold">{m.sender === "user" ? "You (Ananya R.)" : "Concept Detective"}</span>
                     <span>{m.timestamp}</span>
                   </div>
 
-                  {/* Main Response Text */}
+                  {m.attachment && (
+                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-black/10 px-2 py-1 text-[11px]">
+                      <Paperclip className="h-3 w-3" />
+                      <span>{m.attachment.name} ({m.attachment.size})</span>
+                    </div>
+                  )}
+
                   <p className="leading-relaxed text-xs">{m.text}</p>
 
                   {/* Grounded Lesson Badge if curriculum-connected */}
@@ -607,7 +849,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
                         )}
                       </div>
 
-                      {/* Tab 1: Step-by-Step Breakdown */}
+                      {/* Tab 1: Step Breakdown */}
                       {(activeStepTab[m.id] || "steps") === "steps" && m.steps && (
                         <div className="space-y-2 bg-muted/20 p-3 rounded-xl border border-border">
                           {m.steps.map((st, sIdx) => (
@@ -638,7 +880,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
                             <span className="font-bold text-[#19B99A] uppercase text-[10px] tracking-wide">
                               Knowledge Verification Check
                             </span>
-                            <Badge variant="outline" className="text-[10px] bg-card dark:bg-[#19B99A]/20 border-[#19B99A]/40 text-[#19B99A]">
+                            <Badge variant="outline" className="text-[10px] bg-card border-[#19B99A]/40 text-[#19B99A]">
                               +20 XP Reward
                             </Badge>
                           </div>
@@ -677,7 +919,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
                     </div>
                   )}
 
-                  {/* Hints-First Scaffolding */}
+                  {/* Progressive Hint */}
                   {m.hint && (
                     <div className="border-t border-border pt-2">
                       <button
@@ -722,10 +964,10 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
             {/* Loading State Skeleton */}
             {status === "loading" && (
               <div className="flex gap-3 justify-start items-center">
-                <div className="h-9 w-9 rounded-xl bg-[#EAE7FF] flex items-center justify-center text-[#6541F5] animate-pulse">
-                  <Bot className="h-5 w-5" />
+                <div className="h-8 w-8 rounded-xl bg-[#EAE7FF] flex items-center justify-center text-[#6541F5] animate-pulse">
+                  <Bot className="h-4 w-4" />
                 </div>
-                <div className="rounded-2xl rounded-tl-none border border-border card-surface p-4 text-xs space-y-2">
+                <div className="rounded-2xl rounded-tl-none border border-border card-surface p-3.5 text-xs space-y-1.5">
                   <div className="flex items-center gap-2 text-[#6541F5] font-semibold">
                     <span className="h-2 w-2 rounded-full bg-[#6541F5] animate-ping" />
                     <span>Searching NCERT Class 6–8 syllabus database...</span>
@@ -742,7 +984,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
                   <span className="flex items-center gap-1.5">
                     <AlertTriangle className="h-4 w-4" /> Diagnostic Engine Timeout
                   </span>
-                  <Badge variant="outline" className="border-[#E95778]/40 bg-card dark:bg-[#E95778]/20 text-[#E95778]">
+                  <Badge variant="outline" className="border-[#E95778]/40 bg-card text-[#E95778]">
                     Network Issue
                   </Badge>
                 </div>
@@ -758,88 +1000,88 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
                 </Button>
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Chat Input Controls */}
-          <div className="pt-3 border-t border-border flex gap-2">
-            <input
-              id="tutor-chat-input"
-              value={inputMsg}
-              onChange={(e) => setInputMsg(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              placeholder={
-                selectedLang === "hi"
-                  ? "पाठ्यक्रम का कोई भी प्रश्न पूछें (जैसे: 1/2 + 1/3 = 2/5 क्यों नहीं होता?)..."
-                  : selectedLang === "kn"
-                  ? "ಯಾವುದೇ ಪಠ್ಯಕ್ರಮ ಪ್ರಶ್ನೆ ಕೇಳಿ (ಉದಾ: 1/2 + 1/3 = 2/5 ಏಕೆ ಅಲ್ಲ?)..."
-                  : "Ask any curriculum question (e.g. Why does a fraction need a common denominator?)..."
-              }
-              className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-[#6541F5]"
-              disabled={status === "loading"}
-            />
-            <Button
-              id="tutor-ask-btn"
-              onClick={() => handleSendMessage()}
-              disabled={status === "loading" || !inputMsg.trim()}
-              className="bg-[#6541F5] text-white hover:bg-[#5230E8] font-bold text-xs shadow-sm px-4"
-            >
-              <Send className="h-3.5 w-3.5 mr-1.5" /> Ask Detective
-            </Button>
+          {/* Sticky Bottom Composer */}
+          <div className="sticky bottom-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-3 pb-2 w-full">
+            <div className="card-surface rounded-2xl border border-border shadow-md p-3.5 flex flex-col justify-between transition-all focus-within:border-[#6541F5]">
+              <textarea
+                id="tutor-chat-input"
+                rows={2}
+                value={inputMsg}
+                onChange={(e) => setInputMsg(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Ask anything AI assistant"
+                className="w-full resize-none bg-transparent border-0 p-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 leading-relaxed"
+                disabled={status === "loading"}
+              />
+
+              {attachedFile && (
+                <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#EAE7FF]/70 border border-[#6541F5]/30 px-2 py-0.5 text-xs text-[#6541F5] mt-1 font-medium">
+                  <Paperclip className="h-3 w-3" />
+                  <span>{attachedFile.name} ({attachedFile.size})</span>
+                  <button onClick={() => setAttachedFile(null)} className="hover:text-foreground ml-1">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-1">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    title="Attach file"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    title="Upload image"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={toggleSpeechRecognition}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      isListening
+                        ? "bg-[#E95778]/15 text-[#E95778] animate-pulse"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                    title={isListening ? "Listening... click to stop" : "Use microphone"}
+                  >
+                    {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </button>
+
+                  <Button
+                    id="tutor-ask-btn"
+                    size="sm"
+                    onClick={() => handleSendMessage()}
+                    disabled={status === "loading" || (!inputMsg.trim() && !attachedFile)}
+                    className="h-8 w-8 rounded-full bg-[#6541F5] text-white hover:bg-[#5230E8] p-0 flex items-center justify-center shadow-xs"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Right Column: Syllabus Misconceptions & Grounding Catalogue */}
-        <div className="lg:col-span-4 space-y-6">
-          <Panel title="Frequently Diagnosed Misconceptions">
-            <p className="text-xs text-muted-foreground mb-3">
-              Tap any common syllabus bottleneck to see how Concept Detective uncovers the root error:
-            </p>
-            <div className="space-y-2.5 text-xs">
-              {misconceptions.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleSendMessage(`Why is it a mistake to answer "${item.studentAnswer}" for "${item.question}"?`)}
-                  className="w-full text-left rounded-xl border border-border card-surface p-3 text-xs space-y-1.5 hover:border-[#6541F5] hover:bg-[#EAE7FF]/20 transition-all shadow-xs"
-                >
-                  <span className="font-bold text-foreground block">{item.misconception}</span>
-                  <p className="text-[11px] text-[#E95778] font-medium">Common error: "{item.studentAnswer}"</p>
-                  <p className="text-[11px] text-muted-foreground line-clamp-2">{item.why}</p>
-                </button>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel title="Curriculum Grounding Standards">
-            <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-2.5">
-                <BookOpen className="h-4 w-4 text-[#6541F5] shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-foreground block">NCERT Textbook Alignment</span>
-                  <p className="text-[11px] text-muted-foreground">Class 6–8 Mathematics & Science learning competencies.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <ShieldCheck className="h-4 w-4 text-[#19B99A] shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-foreground block">Zero Student Data Tracking</span>
-                  <p className="text-[11px] text-muted-foreground">Questions are processed in browser memory without third-party advertising cookies.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <Languages className="h-4 w-4 text-[#F5A623] shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-foreground block">Regional Dialect Fidelity</span>
-                  <p className="text-[11px] text-muted-foreground">Native analogies validated in English, Hindi, and Kannada.</p>
-                </div>
-              </div>
-            </div>
-          </Panel>
-
-          <SimNote>
-            Pedagogical AI model running locally in browser memory without external APIs or privacy risks.
-          </SimNote>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
