@@ -4,12 +4,33 @@ import {
   Bot, Send, Sparkles, Lightbulb, CheckCircle2,
   BookOpen, ShieldCheck, AlertTriangle, RotateCcw,
   ExternalLink, Languages, Info, Paperclip,
-  Image as ImageIcon, Mic, MicOff, Share2, Plus, ArrowUp, X
+  Image as ImageIcon, Mic, MicOff, Share2, Plus, ArrowUp, X,
+  SlidersHorizontal, Check, Copy, Zap, Workflow, RefreshCw, Cpu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useDemo, type Lang } from "@/lib/demo-store";
 import { misconceptions } from "@/data/demo";
+import { cn } from "@/lib/utils";
+import {
+  getN8nConfig,
+  saveN8nConfig,
+  sendChatMessageToN8n,
+  testN8nConnection,
+  resetN8nSession,
+  DEFAULT_WEBHOOK_ID,
+  DEFAULT_SYSTEM_PROMPT,
+  getDefaultWebhookUrl,
+  type N8nWorkflowConfig,
+} from "@/services/n8n-tutor";
 
 interface PracticeQuestion {
   question: string;
@@ -23,21 +44,23 @@ interface ChatMessage {
   sender: "user" | "tutor";
   timestamp: string;
   text: string;
+  sourceEngine?: "n8n-agent" | "offline-curriculum" | undefined;
+  modelUsed?: string | undefined;
   // Pedagogical scaffolding
-  groundedLessonId?: string;
-  groundedLessonTitle?: string;
-  groundedChapter?: string;
-  steps?: string[];
+  groundedLessonId?: string | undefined;
+  groundedLessonTitle?: string | undefined;
+  groundedChapter?: string | undefined;
+  steps?: string[] | undefined;
   analogy?: {
     title: string;
     text: string;
-  };
-  hint?: string;
-  practice?: PracticeQuestion;
-  followUps?: string[];
-  isUncertain?: boolean;
-  uncertaintyReason?: string;
-  languageUsed?: Lang;
+  } | undefined;
+  hint?: string | undefined;
+  practice?: PracticeQuestion | undefined;
+  followUps?: string[] | undefined;
+  isUncertain?: boolean | undefined;
+  uncertaintyReason?: string | undefined;
+  languageUsed?: Lang | undefined;
   attachment?: {
     name: string;
     size: string;
@@ -277,13 +300,24 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
+  // n8n Workflow State
+  const [n8nConfig, setN8nConfig] = useState<N8nWorkflowConfig>(getN8nConfig);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [tempWebhookUrl, setTempWebhookUrl] = useState(n8nConfig.webhookUrl);
+  const [tempMode, setTempMode] = useState(n8nConfig.mode);
+  const [isTestingN8n, setIsTestingN8n] = useState(false);
+  const [testFeedback, setTestFeedback] = useState<{ ok: boolean; message: string; latency?: number } | null>(null);
+  const [copiedWebhookId, setCopiedWebhookId] = useState(false);
+  const [lastN8nError, setLastN8nError] = useState<string | null>(null);
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
+
   // Whether user has entered into an active conversation session
   const hasUserMessages = messages.length > 0;
 
   // Handle initial query if present
   useEffect(() => {
     if (initialQuery && initialQuery.trim()) {
-      handleSendMessage(initialQuery);
+      void handleSendMessage(initialQuery);
     }
   }, [initialQuery]);
 
@@ -294,7 +328,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
     }
   }, [messages, status, hasUserMessages]);
 
-  const handleSendMessage = (customText?: string) => {
+  const handleSendMessage = async (customText?: string) => {
     const textToSend = (customText || inputMsg).trim();
     if (!textToSend && !attachedFile) return;
 
@@ -312,8 +346,69 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
     setInputMsg("");
     setAttachedFile(null);
     setStatus("loading");
+    setLastN8nError(null);
+    setFallbackNotice(null);
 
-    // Diagnostic syllabus resolution
+    // 1. If n8n Live or Hybrid mode is enabled, attempt calling the n8n LangChain Agent workflow
+    if (n8nConfig.mode !== "offline-only") {
+      try {
+        const n8nResult = await sendChatMessageToN8n(textToSend, {
+          webhookUrl: n8nConfig.webhookUrl,
+        });
+
+        if (n8nResult.success) {
+          const tutorMessageId = `tutor-${Date.now()}`;
+          const lowerText = textToSend.toLowerCase();
+          const match = CURRICULUM_KNOWLEDGE.find((item) =>
+            item.keywords.some((kw) => lowerText.includes(kw.toLowerCase()))
+          );
+
+          const reply: ChatMessage = {
+            id: tutorMessageId,
+            sender: "tutor",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            text: n8nResult.text,
+            sourceEngine: "n8n-agent",
+            modelUsed: n8nResult.model,
+            groundedLessonId: match?.lessonId,
+            groundedLessonTitle: match?.lessonTitle,
+            groundedChapter: match?.chapter,
+            hint: match?.hint,
+            practice: match?.practice,
+            followUps: match?.followUps || [
+              "Can you explain this with a simpler village analogy?",
+              "Can you give me a quick practice question to test my understanding?",
+              "How does this relate to Class 7 NCERT Science/Math?"
+            ],
+            languageUsed: selectedLang
+          };
+
+          setMessages((prev) => [...prev, reply]);
+          setStatus("ready");
+          d.awardActivityXp("tutor-consultation", 15, "Consulted n8n GPT-5 Mini Agent");
+          return;
+        } else if (n8nConfig.mode === "n8n-live") {
+          // In live-only mode, report error directly
+          setLastN8nError(n8nResult.error || "Could not reach n8n agent.");
+          setStatus("error");
+          return;
+        } else {
+          // Hybrid mode: record notice and fall through to offline curriculum engine
+          setFallbackNotice(
+            `n8n Agent unreachable (${n8nResult.error || "offline"}). Routed seamlessly to offline NCERT engine.`
+          );
+        }
+      } catch (err: any) {
+        if (n8nConfig.mode === "n8n-live") {
+          setLastN8nError(err?.message || "Error communicating with n8n workflow.");
+          setStatus("error");
+          return;
+        }
+        setFallbackNotice("n8n workflow connection error. Switched to offline NCERT engine.");
+      }
+    }
+
+    // 2. Offline Curriculum Diagnostic Engine (Fallback or Standalone mode)
     setTimeout(() => {
       const lowerText = textToSend.toLowerCase();
       const match = CURRICULUM_KNOWLEDGE.find((item) =>
@@ -342,6 +437,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
           sender: "tutor",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           text: introText,
+          sourceEngine: "offline-curriculum",
           groundedLessonId: match.lessonId,
           groundedLessonTitle: match.lessonTitle,
           groundedChapter: match.chapter,
@@ -376,6 +472,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
             : selectedLang === "kn"
             ? `ಪಠ್ಯಕ್ರಮದ ಮಿತಿ (Out of Scope): "${textToSend}" ತರಗತಿ 6-8 ರ ಅಧಿಕೃತ NCERT ಪಠ್ಯಕ್ರಮದಲ್ಲಿ ಬರುವುದಿಲ್ಲ.`
             : `Curriculum Scope Boundary: "${textToSend}" falls outside the approved Class 6–8 NCERT syllabus.`,
+          sourceEngine: "offline-curriculum",
           isUncertain: true,
           uncertaintyReason: "To protect students from AI hallucinations, Concept Detective is strictly grounded in the approved middle-school syllabus. I do not guess or speculate on out-of-syllabus topics. Please ask your science/math teacher or consult higher secondary textbooks.",
           followUps: [
@@ -392,6 +489,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
           sender: "tutor",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           text: `I examined your inquiry regarding "${textToSend}". In science and mathematics, breaking this into observable components gives us the key!`,
+          sourceEngine: "offline-curriculum",
           steps: [
             "Identify the fundamental physical or mathematical quantities involved.",
             "Test whether any conservation law applies (conservation of energy, mass, or parts of a whole).",
@@ -420,7 +518,7 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
       }
 
       setMessages((prev) => [...prev, reply]);
-    }, 700);
+    }, 600);
   };
 
   const handleNewChat = () => {
@@ -562,13 +660,41 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
           </div>
         </div>
 
-        {/* Header Right Actions: New Chat & Share */}
+        {/* Header Right Actions: n8n Workflow Status, New Chat & Share */}
         <div className="flex items-center gap-2">
           {shareSuccess && (
             <Badge variant="outline" className="border-[#19B99A]/40 bg-[#DDF8EE]/80 text-[#19B99A] text-xs font-medium py-1">
               Link copied!
             </Badge>
           )}
+
+          {/* n8n Workflow Trigger Button */}
+          <button
+            onClick={() => {
+              setTempWebhookUrl(n8nConfig.webhookUrl);
+              setTempMode(n8nConfig.mode);
+              setTestFeedback(null);
+              setIsConfigModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-card hover:bg-muted/60 px-2.5 py-1 text-xs font-semibold text-foreground hover:border-[#6541F5] hover:text-[#6541F5] transition-all cursor-pointer shadow-2xs"
+            title="Configure n8n Agent Workflow (GPT-5 Mini)"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className={cn(
+                "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                n8nConfig.mode === "offline-only" ? "bg-amber-400" : "bg-emerald-400"
+              )} />
+              <span className={cn(
+                "relative inline-flex rounded-full h-2 w-2",
+                n8nConfig.mode === "offline-only" ? "bg-amber-500" : "bg-emerald-500"
+              )} />
+            </span>
+            <span className="hidden sm:inline">n8n Agent:</span>
+            <span className="font-bold text-[#6541F5] dark:text-[#7C5CFA]">
+              {n8nConfig.mode === "offline-only" ? "Offline" : "GPT-5 Mini"}
+            </span>
+            <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground ml-0.5" />
+          </button>
 
           <Button
             size="sm"
@@ -736,16 +862,44 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
         <div className="flex-1 flex flex-col justify-between max-w-[860px] mx-auto w-full">
           {/* Conversation Stream */}
           <div className="flex-1 space-y-4 py-4 overflow-y-auto pr-1">
-            {/* Honest AI Disclaimer Banner */}
-            <div className="rounded-xl border border-[#6541F5]/20 bg-[#F5F5FF] dark:bg-[#6541F5]/10 p-3 text-xs flex items-center justify-between gap-2">
+            {/* Active Workflow Status Banner */}
+            <div className="rounded-xl border border-[#6541F5]/25 bg-[#F5F5FF] dark:bg-[#6541F5]/10 p-3 text-xs flex flex-wrap items-center justify-between gap-2 shadow-2xs">
               <div className="flex items-center gap-2 text-[#6541F5] dark:text-[#7C5CFA] font-bold text-[11px]">
-                <Info className="h-4 w-4 shrink-0" />
-                <span>Curriculum-Grounded Pedagogical Assistant · In-Browser Memory</span>
+                <Workflow className="h-4 w-4 shrink-0" />
+                <span>
+                  {n8nConfig.mode === "offline-only"
+                    ? "Offline NCERT Curriculum Diagnosis Engine · Local Memory"
+                    : "n8n LangChain Agent Active · Model: GPT-5 Mini · Webhook: 2025e060..."}
+                </span>
               </div>
-              <Badge variant="outline" className="border-[#6541F5]/30 bg-card text-[#6541F5] dark:text-[#7C5CFA] text-[10px]">
-                No Cloud LLM
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-[#6541F5]/30 bg-card text-[#6541F5] dark:text-[#7C5CFA] text-[10px] font-bold">
+                  {n8nConfig.mode === "offline-only" ? "Offline Only" : "n8n Live: GPT-5 Mini"}
+                </Badge>
+                <button
+                  onClick={() => setIsConfigModalOpen(true)}
+                  className="text-[10px] underline font-bold text-[#6541F5] dark:text-[#7C5CFA] hover:text-[#5230E8] cursor-pointer"
+                >
+                  Configure
+                </button>
+              </div>
             </div>
+
+            {/* Seamless Hybrid Fallback Notification */}
+            {fallbackNotice && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs flex items-center justify-between gap-2 text-amber-800 dark:text-amber-200 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                  <span className="text-[11px] leading-tight">{fallbackNotice}</span>
+                </div>
+                <button
+                  onClick={() => setIsConfigModalOpen(true)}
+                  className="text-[10px] font-bold underline hover:opacity-80 shrink-0 cursor-pointer"
+                >
+                  Check Webhook
+                </button>
+              </div>
+            )}
 
             {messages.map((m) => (
               <div
@@ -765,8 +919,21 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
                       : "card-surface text-foreground border border-border rounded-tl-none shadow-sm"
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[10px] opacity-75 border-b border-current/10 pb-1">
-                    <span className="font-semibold">{m.sender === "user" ? "You (Ananya R.)" : "Concept Detective"}</span>
+                  <div className="flex items-center justify-between text-[10px] opacity-80 border-b border-current/10 pb-1 gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{m.sender === "user" ? "You (Ananya R.)" : "Concept Detective"}</span>
+                      {m.sender === "tutor" && (
+                        m.sourceEngine === "n8n-agent" ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-[9px]">
+                            <Zap className="h-2.5 w-2.5 fill-current" /> n8n Agent · GPT-5 Mini
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#6541F5]/10 border border-[#6541F5]/25 text-[#6541F5] dark:text-[#7C5CFA] font-bold text-[9px]">
+                            <BookOpen className="h-2.5 w-2.5" /> NCERT Offline Engine
+                          </span>
+                        )
+                      )}
+                    </div>
                     <span>{m.timestamp}</span>
                   </div>
 
@@ -979,25 +1146,53 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
 
             {/* Error State Card */}
             {status === "error" && (
-              <div className="rounded-xl border border-[#E95778]/40 bg-[#FCE5EB] p-4 text-xs space-y-2">
+              <div className="rounded-xl border border-[#E95778]/40 bg-[#FCE5EB] dark:bg-[#E95778]/15 p-4 text-xs space-y-2">
                 <div className="flex items-center justify-between text-[#E95778] font-bold">
                   <span className="flex items-center gap-1.5">
-                    <AlertTriangle className="h-4 w-4" /> Diagnostic Engine Timeout
+                    <AlertTriangle className="h-4 w-4" /> {lastN8nError ? "n8n AI Agent Workflow Error" : "Diagnostic Engine Timeout"}
                   </span>
                   <Badge variant="outline" className="border-[#E95778]/40 bg-card text-[#E95778]">
-                    Network Issue
+                    {lastN8nError ? "n8n Webhook" : "Network Issue"}
                   </Badge>
                 </div>
-                <p className="text-foreground text-[11px]">
-                  Unable to connect to the local curriculum diagnosis engine. Please verify offline sync status or retry your inquiry.
+                <p className="text-foreground text-[11px] leading-relaxed">
+                  {lastN8nError
+                    ? `Could not communicate with the n8n webhook (${n8nConfig.webhookUrl}). Make sure your n8n workflow is activated and listening, or switch to Hybrid/Offline mode.`
+                    : "Unable to connect to the curriculum diagnosis engine. Please verify offline sync status or retry your inquiry."}
                 </p>
-                <Button
-                  size="sm"
-                  onClick={handleRetry}
-                  className="bg-[#E95778] text-white hover:bg-[#d04565] text-xs font-bold"
-                >
-                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Retry Inquiry
-                </Button>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    onClick={handleRetry}
+                    className="bg-[#E95778] text-white hover:bg-[#d04565] text-xs font-bold h-8 cursor-pointer"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Retry Inquiry
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setTempWebhookUrl(n8nConfig.webhookUrl);
+                      setTempMode(n8nConfig.mode);
+                      setIsConfigModalOpen(true);
+                    }}
+                    className="border-[#E95778]/40 text-[#E95778] hover:bg-[#E95778]/10 text-xs font-bold h-8 cursor-pointer"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" /> Configure n8n Webhook
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      saveN8nConfig({ mode: "offline-only" });
+                      setN8nConfig((prev) => ({ ...prev, mode: "offline-only" }));
+                      setStatus("ready");
+                    }}
+                    className="text-xs font-bold text-muted-foreground hover:text-foreground h-8 cursor-pointer"
+                  >
+                    Switch to Offline Mode
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1082,6 +1277,280 @@ export function AiTutorView({ initialQuery = "" }: AiTutorViewProps) {
           </div>
         </div>
       )}
+
+      {/* n8n LangChain Workflow Configuration Modal */}
+      <Dialog open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-[#6541F5] dark:text-[#7C5CFA]">
+              <Workflow className="h-5 w-5" />
+              <DialogTitle className="text-base font-extrabold text-foreground">
+                n8n AI Agent Workflow Configuration
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Integrated with LangChain Agent v3.1, OpenAI GPT-5 Mini, and Chat Trigger webhook.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            {/* Architecture Node Diagram */}
+            <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Workflow Architecture Pipeline
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-[11px]">
+                <div className="rounded-lg border border-border bg-card p-2 shadow-2xs">
+                  <div className="flex items-center justify-center gap-1 font-bold text-foreground">
+                    <Workflow className="h-3.5 w-3.5 text-[#6541F5]" />
+                    <span>Chat Trigger</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
+                    ID: 2025e060...
+                  </span>
+                </div>
+                <div className="rounded-lg border border-[#6541F5]/30 bg-[#EAE7FF]/30 dark:bg-[#6541F5]/10 p-2 shadow-2xs">
+                  <div className="flex items-center justify-center gap-1 font-bold text-[#6541F5] dark:text-[#7C5CFA]">
+                    <Cpu className="h-3.5 w-3.5" />
+                    <span>AI Agent (v3.1)</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block mt-0.5">
+                    LangChain Agent
+                  </span>
+                </div>
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 shadow-2xs">
+                  <div className="flex items-center justify-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                    <Zap className="h-3.5 w-3.5 fill-current" />
+                    <span>GPT-5 Mini</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block mt-0.5">
+                    OpenAI Chat Model
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Webhook ID & Copy */}
+            <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
+              <div>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Workflow Webhook ID
+                </span>
+                <code className="text-xs font-mono font-bold text-foreground">
+                  {DEFAULT_WEBHOOK_ID}
+                </code>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.clipboard) {
+                    navigator.clipboard.writeText(DEFAULT_WEBHOOK_ID);
+                    setCopiedWebhookId(true);
+                    setTimeout(() => setCopiedWebhookId(false), 2000);
+                  }
+                }}
+                className="h-8 text-xs font-bold cursor-pointer"
+              >
+                {copiedWebhookId ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5 mr-1" /> Copy ID
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Webhook Endpoint URL Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                <span>Webhook Endpoint URL</span>
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  Production / Test / Custom Tunnel
+                </span>
+              </label>
+              <Input
+                value={tempWebhookUrl}
+                onChange={(e) => setTempWebhookUrl(e.target.value)}
+                placeholder="http://localhost:5678/webhook/2025e060-0d48-4bd3-9bce-3f418ce83a7d/chat"
+                className="font-mono text-xs h-9"
+              />
+
+              {/* Quick Presets */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] text-muted-foreground font-medium mr-1">Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => setTempWebhookUrl(`http://localhost:5678/webhook/${DEFAULT_WEBHOOK_ID}/chat`)}
+                  className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground hover:border-[#6541F5] hover:text-[#6541F5] cursor-pointer"
+                >
+                  Local Live (5678)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempWebhookUrl(`http://localhost:5678/webhook-test/${DEFAULT_WEBHOOK_ID}/chat`)}
+                  className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground hover:border-[#6541F5] hover:text-[#6541F5] cursor-pointer"
+                >
+                  Test Webhook
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTempWebhookUrl(getDefaultWebhookUrl())}
+                  className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground hover:border-[#6541F5] hover:text-[#6541F5] cursor-pointer"
+                >
+                  Default
+                </button>
+              </div>
+            </div>
+
+            {/* Mode Selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground block">
+                Operation Mode
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  {
+                    id: "hybrid",
+                    title: "Hybrid (Recommended)",
+                    desc: "Live n8n GPT-5 Mini with offline fallback",
+                  },
+                  {
+                    id: "n8n-live",
+                    title: "n8n Live Agent Only",
+                    desc: "Direct cloud/local agent execution",
+                  },
+                  {
+                    id: "offline-only",
+                    title: "Offline NCERT Only",
+                    desc: "Rural low-resource local engine",
+                  },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setTempMode(m.id as any)}
+                    className={`rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
+                      tempMode === m.id
+                        ? "border-[#6541F5] bg-[#6541F5]/10 text-foreground ring-1 ring-[#6541F5]"
+                        : "border-border bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                    }`}
+                  >
+                    <div className="font-bold text-xs text-foreground">{m.title}</div>
+                    <div className="text-[10px] leading-tight text-muted-foreground mt-0.5">{m.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Test Connection Button & Result Feedback */}
+            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground">Verify Connectivity</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    setIsTestingN8n(true);
+                    setTestFeedback(null);
+                    const res = await testN8nConnection(tempWebhookUrl);
+                    setTestFeedback(res);
+                    setIsTestingN8n(false);
+                  }}
+                  disabled={isTestingN8n || !tempWebhookUrl.trim()}
+                  className="h-8 text-xs font-bold cursor-pointer"
+                >
+                  {isTestingN8n ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Pinging...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-3.5 w-3.5 mr-1.5 text-emerald-600 fill-current" /> Test Connection
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {testFeedback && (
+                <div
+                  className={`rounded-lg p-2.5 text-[11px] leading-snug border ${
+                    testFeedback.ok
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                      : "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+                  }`}
+                >
+                  <strong>{testFeedback.ok ? "✓ Connection Successful:" : "⚠ Connection Notice:"}</strong>{" "}
+                  {testFeedback.message}
+                  {!testFeedback.ok && (
+                    <span className="block mt-1 text-[10px] opacity-85">
+                      Tip: If using n8n locally, ensure your workflow with webhook ID <code>{DEFAULT_WEBHOOK_ID}</code> is active. VidyaVerse's Hybrid mode will automatically serve students via the offline NCERT diagnostic engine if n8n is offline.
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* System Prompt Inspector */}
+            <div className="rounded-xl border border-border bg-card p-3 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Workflow System Prompt
+              </span>
+              <p className="text-[11px] font-mono text-muted-foreground leading-relaxed bg-muted/30 p-2 rounded-lg border border-border/50">
+                "{DEFAULT_SYSTEM_PROMPT}"
+              </p>
+            </div>
+          </div>
+
+          {/* Modal Actions */}
+          <div className="flex items-center justify-between pt-3 border-t border-border">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                resetN8nSession();
+                alert("Conversation memory session reset. Next inquiry will begin with a fresh context.");
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground h-9 cursor-pointer"
+            >
+              Reset Session Memory
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsConfigModalOpen(false)}
+                className="h-9 text-xs cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  saveN8nConfig({
+                    webhookUrl: tempWebhookUrl.trim(),
+                    mode: tempMode,
+                  });
+                  setN8nConfig({
+                    ...n8nConfig,
+                    webhookUrl: tempWebhookUrl.trim(),
+                    mode: tempMode,
+                    isCustomUrl: true,
+                  });
+                  setIsConfigModalOpen(false);
+                }}
+                className="bg-[#6541F5] hover:bg-[#5230E8] text-white font-bold text-xs h-9 px-4 shadow-xs cursor-pointer"
+              >
+                Save & Apply
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

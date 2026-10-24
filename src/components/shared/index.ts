@@ -7,3 +7,4 @@ export { LoadingState } from "./LoadingState";
 export { ErrorState } from "./ErrorState";
 export { DemoStatus } from "./DemoStatus";
 export { BottomNavigation } from "./BottomNavigation";
+export { AiTutorFloatingBot } from "./AiTutorFloatingBot";

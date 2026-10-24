@@ -44,109 +44,98 @@ export const Route = createFileRoute("/")({
 
 function HeroInteractivePreview() {
   return (
-    <div className="relative mx-auto w-full max-w-lg">
+    <div className="relative mx-auto w-full max-w-lg group">
       {/* Soft theme glow ring */}
-      <div className="absolute -inset-2 rounded-[32px] bg-gradient-to-tr from-[#5037ED]/15 via-[#6541F5]/10 to-[#FA6400]/10 blur-xl" />
+      <div className="absolute -inset-2.5 rounded-[36px] bg-gradient-to-tr from-[#5037ED]/25 via-[#6541F5]/20 to-[#FA6400]/20 blur-2xl opacity-75 group-hover:opacity-100 transition-opacity" />
 
-      {/* Main Elevated Preview Card inspired by modern EdTech dashboards */}
-      <div className="relative rounded-[28px] border border-border/80 bg-card p-5 sm:p-6 shadow-xl text-card-foreground space-y-4">
-        {/* Card Header with Student Profile */}
-        <div className="flex items-center justify-between pb-3 border-b border-border/60">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#FFE7D6] via-[#FFF3EA] to-[#EAE7FF] p-1 flex items-center justify-center shadow-xs">
-              <svg viewBox="0 0 100 100" className="w-full h-full select-none" aria-hidden="true">
-                <circle cx="28" cy="24" r="13" fill="#3D2314" />
-                <circle cx="72" cy="24" r="13" fill="#3D2314" />
-                <ellipse cx="50" cy="40" rx="22" ry="22" fill="#99603D" />
-                <circle cx="41" cy="39" r="2.8" fill="#1C1008" />
-                <circle cx="59" cy="39" r="2.8" fill="#1C1008" />
-                <path d="M 44 49 Q 50 54 56 49" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-                <path d="M 32 68 Q 50 72 68 68 L 74 100 L 26 100 Z" fill="#F5A623" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-bold text-sm sm:text-base text-foreground leading-tight">Ananya R.</h3>
-              <span className="text-xs text-muted-foreground font-medium">Class 7 · Kalyan School</span>
-            </div>
+      {/* Main Elevated Student Holding Tab Showcase Container */}
+      <div className="relative overflow-hidden rounded-[32px] border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl text-card-foreground p-3 sm:p-4">
+        {/* Hero Visual: School Kid Holding Tablet */}
+        <div className="relative aspect-square w-full overflow-hidden rounded-[26px] bg-gradient-to-b from-[#EAE7FF]/50 to-[#F5F5FF]/80 dark:from-[#1E1B39]/50 dark:to-card">
+          <img
+            src="/student-holding-tab.jpg"
+            alt="School kid enthusiastically learning on a digital tablet with VidyaVerse"
+            className="w-full h-full object-cover rounded-[26px] transform group-hover:scale-[1.02] transition-transform duration-500 select-none"
+            loading="eager"
+          />
+
+          {/* Floating Glassmorphic Badge: Streak (Top-Left) */}
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold shadow-lg border border-white/20 animate-in fade-in">
+            <Flame className="h-3.5 w-3.5 text-[#FA6400] fill-current" />
+            <span>6 Day Streak</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FA6400]/10 text-[#FA6400] text-xs font-bold">
-              <Flame className="h-3.5 w-3.5 fill-current" /> 6 Day Streak
+          {/* Floating Glassmorphic Badge: Tab Status (Top-Right) */}
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/85 dark:bg-black/75 backdrop-blur-md text-foreground text-xs font-bold shadow-lg border border-border/60">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#19B99A] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#19B99A]" />
             </span>
+            <span>Tab Synced · Class 7</span>
+          </div>
+
+          {/* Floating Active Lecture Pill (Bottom Overlay) */}
+          <div className="absolute bottom-3 inset-x-3 rounded-2xl bg-card/95 dark:bg-card/90 backdrop-blur-xl p-3 sm:p-3.5 shadow-xl border border-border/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-[#5037ED] text-white text-[10px] font-bold px-2 py-0.5">
+                  Live on Tab
+                </Badge>
+                <span className="text-[11px] font-bold text-[#5037ED]">Mathematics & Science</span>
+              </div>
+              <span className="text-[11px] font-bold text-muted-foreground">65% Progress</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
+                <h4 className="font-extrabold text-xs sm:text-sm text-foreground truncate">
+                  What a Fraction Really Means
+                </h4>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  NCERT Class 7 · Interactive Breadboard & Sims
+                </p>
+              </div>
+
+              <Button
+                asChild
+                size="sm"
+                className="shrink-0 bg-[#FA6400] hover:bg-[#E55B00] text-white font-bold text-xs h-8 px-3.5 rounded-xl shadow-xs cursor-pointer"
+              >
+                <Link to="/lesson/$id" params={{ id: "fractions-intro" }}>
+                  Resume <Play className="ml-1 h-3 w-3 fill-current" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Current Active Lesson Card */}
-        <div className="rounded-2xl border border-[#EDEDF5] bg-[#F7F7FC] dark:bg-card/60 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <Badge className="bg-[#5037ED] text-white text-xs font-bold px-2.5 py-0.5">
-              Active Lecture
-            </Badge>
-            <span className="text-xs font-bold text-[#5037ED]">Mathematics</span>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-sm sm:text-base text-foreground">
-              What a Fraction Really Means
-            </h4>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Chapter 2 · Fractions & Decimals (NCERT)
-            </p>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-              <span>Lecture Progress</span>
-              <span>65%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-border overflow-hidden">
-              <div className="h-full bg-[#5037ED] rounded-full w-[65%]" />
-            </div>
-          </div>
-
-          <div className="pt-1 flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Duration: 12 Mins</span>
-            <Button
-              asChild
-              size="sm"
-              className="bg-[#FA6400] hover:bg-[#E55B00] text-white font-bold text-xs h-8 px-4 rounded-xl shadow-xs"
-            >
-              <Link to="/lesson/$id" params={{ id: "fractions-intro" }}>
-                Resume <Play className="ml-1 h-3 w-3 fill-current" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        {/* Quick Studio Shortcut Strip */}
-        <div className="grid grid-cols-3 gap-2.5 pt-1">
+        {/* Quick Studio Shortcuts Strip Below Image */}
+        <div className="grid grid-cols-3 gap-2 pt-3">
           <Link
             to="/playlab"
-            className="rounded-xl border border-border p-2.5 text-center hover:border-[#FA6400] transition-colors group"
+            className="rounded-xl border border-border/80 p-2 text-center hover:border-[#FA6400] hover:bg-[#FA6400]/5 transition-all group/item"
           >
-            <Gamepad2 className="h-5 w-5 mx-auto text-[#FA6400] mb-1 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-bold text-foreground block">PlayLab</span>
-            <span className="text-[10px] text-muted-foreground">Physics Games</span>
+            <Gamepad2 className="h-4 w-4 mx-auto text-[#FA6400] mb-0.5 group-hover/item:scale-110 transition-transform" />
+            <span className="text-[11px] font-bold text-foreground block">PlayLab</span>
+            <span className="text-[9px] text-muted-foreground">Physics Games</span>
           </Link>
 
           <Link
             to="/circuitverse"
-            className="rounded-xl border border-border p-2.5 text-center hover:border-[#19B99A] transition-colors group"
+            className="rounded-xl border border-border/80 p-2 text-center hover:border-[#19B99A] hover:bg-[#19B99A]/5 transition-all group/item"
           >
-            <CircuitBoard className="h-5 w-5 mx-auto text-[#19B99A] mb-1 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-bold text-foreground block">Circuits</span>
-            <span className="text-[10px] text-muted-foreground">Virtual Wire Lab</span>
+            <CircuitBoard className="h-4 w-4 mx-auto text-[#19B99A] mb-0.5 group-hover/item:scale-110 transition-transform" />
+            <span className="text-[11px] font-bold text-foreground block">Circuits</span>
+            <span className="text-[9px] text-muted-foreground">Virtual Wire Lab</span>
           </Link>
 
           <Link
             to="/codeverse"
-            className="rounded-xl border border-border p-2.5 text-center hover:border-[#5037ED] transition-colors group"
+            className="rounded-xl border border-border/80 p-2 text-center hover:border-[#5037ED] hover:bg-[#5037ED]/5 transition-all group/item"
           >
-            <Code2 className="h-5 w-5 mx-auto text-[#5037ED] mb-1 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-bold text-foreground block">CodeVerse</span>
-            <span className="text-[10px] text-muted-foreground">Block Rover</span>
+            <Code2 className="h-4 w-4 mx-auto text-[#5037ED] mb-0.5 group-hover/item:scale-110 transition-transform" />
+            <span className="text-[11px] font-bold text-foreground block">CodeVerse</span>
+            <span className="text-[9px] text-muted-foreground">Block Rover</span>
           </Link>
         </div>
       </div>
