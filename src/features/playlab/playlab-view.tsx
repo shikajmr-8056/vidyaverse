@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader, Panel, DemoTag } from "@/components/vv/primitives";
 import { useDemo } from "@/lib/demo-store";
 import { cn } from "@/lib/utils";
+import { NewtonsCarromGame } from "./newtons-carrom-game";
 
 // ==========================================
 // CODEBOT MAZE DEFINITIONS & LEVELS
@@ -232,6 +233,18 @@ const PLAYLAB_CATALOGUE: PlayLabGameInfo[] = [
     difficultyLevels: ["Standard Classroom Kit"],
     physicalBlueprint: "Printable 4-quadrant Indian physical map board with 40 trivia cards, dice, and state flag tokens.",
     digitalCompanion: "Integrated Clue Generator & River Basin Validator available below in the Companion Studio.",
+  },
+  {
+    id: "newtons-carrom",
+    name: "Newton's Carrom (Physics Lab)",
+    subject: "Science",
+    classes: "Class 7 to 9",
+    durationMin: 15,
+    mode: "Digital Playable",
+    learningObjective: "Investigate Newton's Laws of Motion, conservation of momentum, and friction through interactive striker physics.",
+    howToPlay: "Position striker along the baseline, set aiming angle and shot power, shoot, and pocket coins while studying 2D collisions.",
+    playable: true,
+    difficultyLevels: ["Level 1: Direct Momentum", "Level 2: Rebound Angles", "Level 3: Queen & Cover"],
   },
   {
     id: "newtons-race",
@@ -548,6 +561,12 @@ export function PlayLabView() {
             className="data-[state=active]:bg-[#F5A623] data-[state=active]:text-white text-xs font-bold"
           >
             🎲 Math Ludo (Digital Race)
+          </TabsTrigger>
+          <TabsTrigger
+            value="carrom"
+            className="data-[state=active]:bg-[#19B99A] data-[state=active]:text-white text-xs font-bold"
+          >
+            🎯 Newton's Carrom (Physics)
           </TabsTrigger>
           <TabsTrigger
             value="companion"
@@ -1044,7 +1063,14 @@ export function PlayLabView() {
         </TabsContent>
 
         {/* ======================================================== */}
-        {/* 3. PHYSICAL BOARD GAMES & DIGITAL COMPANION TOOLS        */}
+        {/* 3. NEWTON'S CARROM: 2D PHYSICS KINEMATICS & IMPULSE       */}
+        {/* ======================================================== */}
+        <TabsContent value="carrom" className="space-y-6">
+          <NewtonsCarromGame />
+        </TabsContent>
+
+        {/* ======================================================== */}
+        {/* 4. PHYSICAL BOARD GAMES & DIGITAL COMPANION TOOLS        */}
         {/* ======================================================== */}
         <TabsContent value="companion" className="space-y-6">
           <div className="rounded-xl border border-[#0284C7]/30 bg-[#E0F2FE]/40 p-4 text-xs space-y-1">
@@ -1227,7 +1253,17 @@ export function PlayLabView() {
                   {game.playable ? (
                     <Button
                       size="sm"
-                      onClick={() => setActiveStudioTab(game.id === "codebot-maze" ? "codebot" : "ludo")}
+                      onClick={() =>
+                        setActiveStudioTab(
+                          game.id === "codebot-maze"
+                            ? "codebot"
+                            : game.id === "math-ludo"
+                            ? "ludo"
+                            : game.id === "newtons-carrom"
+                            ? "carrom"
+                            : "companion"
+                        )
+                      }
                       className="w-full bg-[#6541F5] text-white hover:bg-[#5230E8] text-xs font-bold"
                     >
                       <Play className="h-3.5 w-3.5 mr-1" /> Play Game Now

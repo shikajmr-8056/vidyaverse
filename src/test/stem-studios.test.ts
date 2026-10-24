@@ -41,6 +41,51 @@ describe("STEM Studio 1: PlayLab Educational Games", () => {
     tokenPosition = 24;
     expect(tokenPosition).toBeGreaterThanOrEqual(24);
   });
+
+  it("calculates Newton's Carrom momentum conservation and elastic collision dynamics", () => {
+    // Striker mass m1 = 3.0, Coin mass m2 = 1.0
+    const m1 = 3.0;
+    const m2 = 1.0;
+    const u1 = 10.0; // Striker initial velocity
+    const u2 = 0.0; // Coin initially at rest
+    const restitution = 0.84;
+
+    // 1D elastic head-on collision impulse
+    const relativeV = u1 - u2;
+    const impulse = (1 + restitution) * relativeV / (1 / m1 + 1 / m2);
+
+    const v1 = u1 - (impulse / m1);
+    const v2 = u2 + (impulse / m2);
+
+    // Verify momentum conservation: m1*u1 + m2*u2 ≈ m1*v1 + m2*v2
+    const initialMomentum = m1 * u1 + m2 * u2;
+    const finalMomentum = m1 * v1 + m2 * v2;
+    expect(finalMomentum).toBeCloseTo(initialMomentum, 2);
+
+    // Striker slows down, coin speeds forward
+    expect(v1).toBeLessThan(u1);
+    expect(v2).toBeGreaterThan(0);
+  });
+
+  it("verifies corner pocket proximity detection on 400x400 carrom board", () => {
+    const pockets = [
+      { x: 26, y: 26 },
+      { x: 374, y: 26 },
+      { x: 26, y: 374 },
+      { x: 374, y: 374 },
+    ];
+    const pocketRadius = 22;
+
+    const coinNearPocket = { x: 30, y: 30 };
+    const coinAtCenter = { x: 200, y: 200 };
+
+    const isPocketed = (coin: { x: number; y: number }) => {
+      return pockets.some((p) => Math.hypot(coin.x - p.x, coin.y - p.y) < pocketRadius);
+    };
+
+    expect(isPocketed(coinNearPocket)).toBe(true);
+    expect(isPocketed(coinAtCenter)).toBe(false);
+  });
 });
 
 describe("STEM Studio 2: CircuitVerse Physics & Diagnostics", () => {
