@@ -272,28 +272,6 @@ function LandingPage() {
                 electronics, coding, and educational games—built to run seamlessly online and offline.
               </p>
 
-              {/* Class Quick Selection Pills */}
-              <div className="space-y-2 pt-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                  Select your class to start learning:
-                </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {[5, 6, 7, 8, 9, 10].map((cls) => (
-                    <Button
-                      key={cls}
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl border-border hover:border-[#5037ED] hover:text-[#5037ED] text-xs sm:text-sm font-bold h-9 px-3.5"
-                    >
-                      <Link to="/auth" search={{ role: "student" }}>
-                        Class {cls}
-                      </Link>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
               {/* Primary Call to Action */}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button

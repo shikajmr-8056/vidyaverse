@@ -393,6 +393,9 @@ export function ClassroomsView() {
               <TabsTrigger value="challenge" className="text-xs font-semibold">
                 Team Challenge
               </TabsTrigger>
+              <TabsTrigger value="leaderboard" className="text-xs font-semibold">
+                Class Leaderboard
+              </TabsTrigger>
             </TabsList>
 
             {/* TAB: ASSIGNMENTS WITH TRI-STATE OFFLINE STATUS */}
@@ -524,6 +527,64 @@ export function ClassroomsView() {
                 <div className="flex justify-between text-[11px] text-muted-foreground">
                   <span>Classroom Progress: 16/25 Completed</span>
                   <span>Ends Mon, 19 Oct</span>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* TAB: CLASS LEADERBOARD (Integrated from Leaderboard) */}
+            <TabsContent value="leaderboard" className="space-y-4">
+              <div className="card-surface rounded-xl border border-border p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <div>
+                    <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-[#F5A623]" /> {activeClass.name} Peer Standings
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Weekly curriculum achievements and peer learning progress
+                    </p>
+                  </div>
+                  <Badge className="bg-[#FFF0D5] text-[#F5A623] border-[#F5A623]/30 text-xs font-bold">
+                    Week 41
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { rank: 1, name: "Pooja H.", xp: 340, streak: 8, medal: "🥇" },
+                    { rank: 2, name: `You (${demoStudent.name})`, xp: d.weeklyXp, streak: demoStudent.streakDays, medal: "🥈" },
+                    { rank: 3, name: "Ravi K.", xp: 285, streak: 6, medal: "🥉" },
+                    { rank: 4, name: "Suresh G.", xp: 240, streak: 5 },
+                    { rank: 5, name: "Kiran D.", xp: 190, streak: 3 },
+                    { rank: 6, name: "Meena B.", xp: 175, streak: 4 },
+                  ].map((item) => {
+                    const isUser = item.name.includes("You");
+                    return (
+                      <div
+                        key={item.rank}
+                        className={`p-3 rounded-xl border flex items-center justify-between gap-3 text-xs transition-colors ${
+                          isUser
+                            ? "bg-[#6541F5]/10 border-[#6541F5]/30 font-bold"
+                            : "border-border bg-background/50 hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 text-center font-bold text-sm">
+                            {item.medal || `#${item.rank}`}
+                          </span>
+                          <div className="w-8 h-8 rounded-full bg-[#6541F5]/15 text-[#6541F5] flex items-center justify-center font-bold text-xs">
+                            {item.name.charAt(0)}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-foreground text-xs">{item.name}</span>
+                            <span className="text-[11px] text-muted-foreground block">{item.streak} day streak</span>
+                          </div>
+                        </div>
+                        <span className="font-bold text-xs text-[#6541F5] bg-[#6541F5]/10 px-2.5 py-1 rounded-lg">
+                          {item.xp} XP
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </TabsContent>

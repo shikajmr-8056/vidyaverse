@@ -165,7 +165,7 @@ export function AppHeader({
                   navigate({ to: "/learn", search: { q: searchVal.trim() } });
                 }
               }}
-              placeholder="Search lessons & labs..."
+              placeholder="Search lessons, subjects and games..."
               className="h-9 w-full rounded-lg border border-input bg-card pl-9 pr-14 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <button

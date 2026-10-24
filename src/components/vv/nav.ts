@@ -120,7 +120,6 @@ export function getRoleNavSections(role: UserRole): NavSectionConfig[] {
         title: { en: "Diagnostics & Network", hi: "निदान और नेटवर्क", kn: "ರೋಗನಿರ್ಣಯ ಮತ್ತು ಜಾಲಬಂಧ" },
         items: [
           { to: "/tutor", icon: Bot, label: { en: "AI Misconceptions", hi: "AI भ्रांतियाँ", kn: "AI ತಪ್ಪು ಕಲ್ಪನೆಗಳು" }, category: "ai-offline" },
-          { to: "/mesh", icon: Network, label: { en: "School Mesh Hub", hi: "स्कूल मेश हब", kn: "ಶಾಲೆ ಮೆಶ್ ಹಬ್" }, category: "ai-offline" },
         ],
       },
       {
@@ -128,7 +127,6 @@ export function getRoleNavSections(role: UserRole): NavSectionConfig[] {
         title: { en: "School Quests & Storage", hi: "स्कूल चुनौतियाँ और स्टोरेज", kn: "ಶಾಲಾ ಸವಾಲುಗಳು ಮತ್ತು ಸಂಗ್ರಹಣೆ" },
         items: [
           { to: "/challenges", icon: Target, label: { en: "School Challenges", hi: "स्कूल चुनौतियाँ", kn: "ಶಾಲಾ ಸವಾಲುಗಳು" }, category: "community" },
-          { to: "/leaderboard", icon: Trophy, label: { en: "Class Leaderboard", hi: "कक्षा लीडरबोर्ड", kn: "ತರಗತಿ ಲೀಡರ್‌ಬೋರ್ಡ್" }, category: "community" },
           { to: "/downloads", icon: Download, label: { en: "Offline Packs", hi: "डाउनलोड्स", kn: "ಡೌನ್‌ಲೋಡ್‌ಗಳು" }, category: "progress" },
         ],
       },
@@ -165,7 +163,6 @@ export function getRoleNavSections(role: UserRole): NavSectionConfig[] {
         items: [
           { to: "/progress", icon: LineChart, label: { en: "Learning Analytics", hi: "प्रगति विश्लेषण", kn: "ಪ್ರಗತಿ ವಿಶ್ಲೇಷಣೆ" }, category: "progress" },
           { to: "/voice", icon: Mic, label: { en: "VidyaVoice Audio", hi: "वाणी सहायक", kn: "ಧ್ವನಿ ಸಹಾಯಕ" }, category: "ai-offline" },
-          { to: "/mesh", icon: Network, label: { en: "Mesh Sync Status", hi: "मेश सिंक स्थिति", kn: "ಮೆಶ್ ಸಿಂಕ್ ಸ್ಥಿತಿ" }, category: "ai-offline" },
         ],
       },
       {
@@ -186,7 +183,6 @@ export function getRoleNavSections(role: UserRole): NavSectionConfig[] {
       items: [
         allNav.find((n) => n.to === "/dashboard")!,
         allNav.find((n) => n.to === "/learn")!,
-        allNav.find((n) => n.to === "/projects")!,
       ],
     },
     {
@@ -196,17 +192,18 @@ export function getRoleNavSections(role: UserRole): NavSectionConfig[] {
         allNav.find((n) => n.to === "/playlab")!,
         allNav.find((n) => n.to === "/circuitverse")!,
         allNav.find((n) => n.to === "/codeverse")!,
+        allNav.find((n) => n.to === "/projects")!,
         allNav.find((n) => n.to === "/tutor")!,
+        allNav.find((n) => n.to === "/voice")!,
       ],
     },
     {
       id: "student-community",
       title: { en: "Community & Quests", hi: "समुदाय और चुनौतियाँ", kn: "ಸಮುದಾಯ ಮತ್ತು ಸವಾಲುಗಳು" },
       items: [
-        allNav.find((n) => n.to === "/rewards")!,
-        allNav.find((n) => n.to === "/challenges")!,
-        allNav.find((n) => n.to === "/leaderboard")!,
         allNav.find((n) => n.to === "/classrooms")!,
+        allNav.find((n) => n.to === "/challenges")!,
+        allNav.find((n) => n.to === "/rewards")!,
       ],
     },
     {
@@ -215,8 +212,6 @@ export function getRoleNavSections(role: UserRole): NavSectionConfig[] {
       items: [
         allNav.find((n) => n.to === "/progress")!,
         allNav.find((n) => n.to === "/downloads")!,
-        allNav.find((n) => n.to === "/voice")!,
-        allNav.find((n) => n.to === "/mesh")!,
         allNav.find((n) => n.to === "/settings")!,
       ],
     },
