@@ -42,101 +42,121 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
-function HeroInteractivePreview() {
+function HeroStudentArchShowcase() {
   return (
-    <div className="relative mx-auto w-full max-w-lg group">
-      {/* Soft theme glow ring */}
-      <div className="absolute -inset-2.5 rounded-[36px] bg-gradient-to-tr from-[#5037ED]/25 via-[#6541F5]/20 to-[#FA6400]/20 blur-2xl opacity-75 group-hover:opacity-100 transition-opacity" />
+    <div className="relative mx-auto w-full max-w-[480px] group select-none">
+      {/* Subtle outer glow */}
+      <div className="absolute -inset-3 rounded-[40px] bg-gradient-to-tr from-[#5037ED]/15 via-[#3B82F6]/15 to-[#FA6400]/10 blur-2xl opacity-70 group-hover:opacity-100 transition-opacity" />
 
-      {/* Main Elevated Student Holding Tab Showcase Container */}
-      <div className="relative overflow-hidden rounded-[32px] border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl text-card-foreground p-3 sm:p-4">
-        {/* Hero Visual: School Kid Holding Tablet */}
-        <div className="relative aspect-square w-full overflow-hidden rounded-[26px] bg-gradient-to-b from-[#EAE7FF]/50 to-[#F5F5FF]/80 dark:from-[#1E1B39]/50 dark:to-card">
-          <img
-            src="/student-holding-tab.jpg"
-            alt="School kid enthusiastically learning on a digital tablet with VidyaVerse"
-            className="w-full h-full object-cover rounded-[26px] transform group-hover:scale-[1.02] transition-transform duration-500 select-none"
-            loading="eager"
-          />
+      {/* Main Reference Card Container */}
+      <div className="relative overflow-hidden rounded-[36px] border border-border/80 bg-card/90 dark:bg-card/95 backdrop-blur-xl p-5 sm:p-7 shadow-2xl">
+        {/* Decorative Doodles matching reference */}
+        {/* 1. Top-Left Blue Scribble Wave */}
+        <svg
+          className="absolute top-5 left-6 w-9 h-9 text-[#2563EB] dark:text-[#3B82F6] pointer-events-none drop-shadow-xs"
+          viewBox="0 0 40 40"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M 6 12 C 12 6, 16 16, 22 10 C 28 4, 32 14, 36 8 C 40 4, 38 20, 32 20 C 26 20, 20 28, 26 30 C 30 32, 34 28, 36 26" />
+        </svg>
 
-          {/* Floating Glassmorphic Badge: Streak (Top-Left) */}
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold shadow-lg border border-white/20 animate-in fade-in">
-            <Flame className="h-3.5 w-3.5 text-[#FA6400] fill-current" />
-            <span>6 Day Streak</span>
-          </div>
+        {/* 2. Left Curved Swoop Line */}
+        <svg
+          className="absolute top-12 left-10 w-44 h-44 text-[#3B82F6]/40 pointer-events-none"
+          viewBox="0 0 100 100"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="M 8 28 Q 55 12 85 45" />
+        </svg>
 
-          {/* Floating Glassmorphic Badge: Tab Status (Top-Right) */}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/85 dark:bg-black/75 backdrop-blur-md text-foreground text-xs font-bold shadow-lg border border-border/60">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#19B99A] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#19B99A]" />
+        {/* 3. Middle-Left Dot Matrix */}
+        <div className="absolute left-6 top-1/2 -translate-y-8 grid grid-cols-4 gap-1.5 opacity-70 pointer-events-none" aria-hidden="true">
+          {Array.from({ length: 16 }).map((_, i) => (
+            <div key={i} className="h-1.5 w-1.5 rounded-full bg-[#2563EB] dark:bg-[#3B82F6]" />
+          ))}
+        </div>
+
+        {/* 4. Middle-Right Curved Arrow Doodle */}
+        <svg
+          className="absolute right-4 sm:right-6 top-1/2 translate-y-6 w-11 h-11 text-[#2563EB] dark:text-[#3B82F6] pointer-events-none"
+          viewBox="0 0 50 50"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M 38 12 C 34 26, 20 28, 12 38" />
+          <path d="M 12 28 L 12 38 L 22 38" />
+        </svg>
+
+        {/* Floating Badge 1 (Top-Right): "More than 800,000+ students" with Avatars */}
+        <div className="absolute top-5 right-4 sm:right-6 z-20 flex items-center gap-2.5 rounded-2xl bg-[#2563EB] text-white px-3.5 py-2.5 shadow-xl border border-white/20 transition-transform group-hover:scale-[1.02]">
+          <div className="flex -space-x-2 shrink-0">
+            <img
+              className="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover"
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+              alt="Student"
+            />
+            <img
+              className="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover"
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80"
+              alt="Student"
+            />
+            <img
+              className="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover"
+              src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80"
+              alt="Student"
+            />
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563EB] font-black text-[11px] ring-2 ring-white">
+              +
             </span>
-            <span>Tab Synced · Class 7</span>
           </div>
-
-          {/* Floating Active Lecture Pill (Bottom Overlay) */}
-          <div className="absolute bottom-3 inset-x-3 rounded-2xl bg-card/95 dark:bg-card/90 backdrop-blur-xl p-3 sm:p-3.5 shadow-xl border border-border/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-[#5037ED] text-white text-[10px] font-bold px-2 py-0.5">
-                  Live on Tab
-                </Badge>
-                <span className="text-[11px] font-bold text-[#5037ED]">Mathematics & Science</span>
-              </div>
-              <span className="text-[11px] font-bold text-muted-foreground">65% Progress</span>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-0.5 min-w-0">
-                <h4 className="font-extrabold text-xs sm:text-sm text-foreground truncate">
-                  What a Fraction Really Means
-                </h4>
-                <p className="text-[10px] text-muted-foreground truncate">
-                  NCERT Class 7 · Interactive Breadboard & Sims
-                </p>
-              </div>
-
-              <Button
-                asChild
-                size="sm"
-                className="shrink-0 bg-[#FA6400] hover:bg-[#E55B00] text-white font-bold text-xs h-8 px-3.5 rounded-xl shadow-xs cursor-pointer"
-              >
-                <Link to="/lesson/$id" params={{ id: "fractions-intro" }}>
-                  Resume <Play className="ml-1 h-3 w-3 fill-current" />
-                </Link>
-              </Button>
-            </div>
+          <div className="text-[10px] sm:text-[11px] font-bold leading-tight">
+            More than 800,000+
+            <span className="block font-medium opacity-90">students</span>
           </div>
         </div>
 
-        {/* Quick Studio Shortcuts Strip Below Image */}
-        <div className="grid grid-cols-3 gap-2 pt-3">
-          <Link
-            to="/playlab"
-            className="rounded-xl border border-border/80 p-2 text-center hover:border-[#FA6400] hover:bg-[#FA6400]/5 transition-all group/item"
-          >
-            <Gamepad2 className="h-4 w-4 mx-auto text-[#FA6400] mb-0.5 group-hover/item:scale-110 transition-transform" />
-            <span className="text-[11px] font-bold text-foreground block">PlayLab</span>
-            <span className="text-[9px] text-muted-foreground">Physics Games</span>
-          </Link>
+        {/* Floating Badge 2 (Middle-Right): "Best Collaboration" Pill Button */}
+        <div className="absolute top-1/2 right-2 sm:right-4 z-20 -translate-y-4 inline-flex items-center gap-2 rounded-full bg-[#2563EB] text-white px-3.5 py-2 shadow-xl border border-white/20 text-xs font-bold tracking-tight transition-transform group-hover:scale-[1.02]">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+            <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+          </span>
+          <span>Best Collaboration</span>
+        </div>
 
-          <Link
-            to="/circuitverse"
-            className="rounded-xl border border-border/80 p-2 text-center hover:border-[#19B99A] hover:bg-[#19B99A]/5 transition-all group/item"
-          >
-            <CircuitBoard className="h-4 w-4 mx-auto text-[#19B99A] mb-0.5 group-hover/item:scale-110 transition-transform" />
-            <span className="text-[11px] font-bold text-foreground block">Circuits</span>
-            <span className="text-[9px] text-muted-foreground">Virtual Wire Lab</span>
-          </Link>
+        {/* Central Arch Portrait Frame of Class 5 Student */}
+        <div className="relative mx-auto mt-4 mb-2 w-[240px] sm:w-[280px] aspect-[3/4] overflow-hidden rounded-t-[130px] sm:rounded-t-[150px] rounded-b-[36px] bg-gradient-to-b from-[#EAE7FF] via-[#F5F5FF] to-muted dark:from-[#1E1B39] dark:to-muted border-2 border-white/80 dark:border-border shadow-lg">
+          <img
+            src="/class-5-student.jpg"
+            alt="Class 5 Student smiling confidently with folded arms in school uniform"
+            className="w-full h-full object-cover object-top transform group-hover:scale-[1.03] transition-transform duration-500"
+            loading="eager"
+          />
+        </div>
 
-          <Link
-            to="/codeverse"
-            className="rounded-xl border border-border/80 p-2 text-center hover:border-[#5037ED] hover:bg-[#5037ED]/5 transition-all group/item"
-          >
-            <Code2 className="h-4 w-4 mx-auto text-[#5037ED] mb-0.5 group-hover/item:scale-110 transition-transform" />
-            <span className="text-[11px] font-bold text-foreground block">CodeVerse</span>
-            <span className="text-[9px] text-muted-foreground">Block Rover</span>
-          </Link>
+        {/* Floating Badge 3 (Bottom-Left): "60% OFF / Premium+ / $160 / Year To Get All Access" */}
+        <div className="absolute bottom-5 left-4 sm:left-6 z-20 rounded-2xl bg-[#2563EB] text-white p-3.5 sm:p-4 shadow-2xl border border-white/20 w-[160px] sm:w-[175px] space-y-1 transition-transform group-hover:scale-[1.02]">
+          <span className="inline-block px-2 py-0.5 rounded-full bg-black/35 text-[9px] font-extrabold uppercase tracking-wider">
+            60% OFF
+          </span>
+          <div className="text-[11px] font-semibold text-blue-100">Premium+</div>
+          <div className="text-2xl sm:text-3xl font-black tracking-tight leading-none text-white">
+            $160
+          </div>
+          <div className="text-[9px] text-blue-100 font-medium leading-tight">
+            / Year To Get All Access
+          </div>
         </div>
       </div>
     </div>
@@ -293,9 +313,9 @@ function LandingPage() {
               </div>
             </div>
 
-            {/* Right Interactive Dashboard Preview */}
+            {/* Right Student Arch Visual matching reference */}
             <div className="lg:col-span-5">
-              <HeroInteractivePreview />
+              <HeroStudentArchShowcase />
             </div>
           </div>
         </section>
